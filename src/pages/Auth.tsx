@@ -27,23 +27,13 @@ export default function Auth() {
         if (error) throw error;
         navigate("/");
       } else {
-        // Create tenant first
-        // We need to use a workaround since RLS blocks unauthenticated inserts
-        // The trigger will handle profile + role creation
-        const { data: tenantData, error: tenantError } = await supabase
-          .from("tenants")
-          .insert({ name: companyName })
-          .select("id")
-          .single();
-
-        // If tenant creation fails due to RLS, we'll handle it via signup metadata
         const { error } = await supabase.auth.signUp({
           email,
           password,
           options: {
             data: {
               full_name: fullName,
-              tenant_id: tenantData?.id,
+              company_name: companyName,
               role: "diretor",
             },
           },
