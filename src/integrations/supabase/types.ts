@@ -120,6 +120,7 @@ export type Database = {
           created_at: string
           created_by: string
           expected_close_date: string | null
+          first_payment_date: string | null
           id: string
           notes: string | null
           stage: Database["public"]["Enums"]["pipeline_stage"]
@@ -127,6 +128,8 @@ export type Database = {
           title: string
           updated_at: string
           value: number | null
+          value_implantacao: number | null
+          value_saas: number | null
         }
         Insert: {
           assigned_to: string
@@ -135,6 +138,7 @@ export type Database = {
           created_at?: string
           created_by: string
           expected_close_date?: string | null
+          first_payment_date?: string | null
           id?: string
           notes?: string | null
           stage?: Database["public"]["Enums"]["pipeline_stage"]
@@ -142,6 +146,8 @@ export type Database = {
           title: string
           updated_at?: string
           value?: number | null
+          value_implantacao?: number | null
+          value_saas?: number | null
         }
         Update: {
           assigned_to?: string
@@ -150,6 +156,7 @@ export type Database = {
           created_at?: string
           created_by?: string
           expected_close_date?: string | null
+          first_payment_date?: string | null
           id?: string
           notes?: string | null
           stage?: Database["public"]["Enums"]["pipeline_stage"]
@@ -157,6 +164,8 @@ export type Database = {
           title?: string
           updated_at?: string
           value?: number | null
+          value_implantacao?: number | null
+          value_saas?: number | null
         }
         Relationships: [
           {
