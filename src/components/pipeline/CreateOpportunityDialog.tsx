@@ -57,6 +57,13 @@ export function CreateOpportunityDialog({ open, onOpenChange, onCreated }: Props
   const [newContactEmail, setNewContactEmail] = useState("");
   const [newContactPhone, setNewContactPhone] = useState("");
 
+  // Inline new company
+  const [showNewCompany, setShowNewCompany] = useState(false);
+  const [newCompanyCnpj, setNewCompanyCnpj] = useState("");
+  const [newCompanyName, setNewCompanyName] = useState("");
+  const [newCompanyAddress, setNewCompanyAddress] = useState("");
+  const [newCompanyWebsite, setNewCompanyWebsite] = useState("");
+
   const { user, profile } = useAuth();
   const { toast } = useToast();
 
@@ -80,6 +87,11 @@ export function CreateOpportunityDialog({ open, onOpenChange, onCreated }: Props
     setNewContactName("");
     setNewContactEmail("");
     setNewContactPhone("");
+    setShowNewCompany(false);
+    setNewCompanyCnpj("");
+    setNewCompanyName("");
+    setNewCompanyAddress("");
+    setNewCompanyWebsite("");
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -122,6 +134,36 @@ export function CreateOpportunityDialog({ open, onOpenChange, onCreated }: Props
       return;
     }
 
+    // Create inline company if needed
+    let finalCompanyId = companyId || null;
+    if (showNewCompany && newCompanyName.trim()) {
+      if (!finalContactId) {
+        toast({ title: "Contato necessário antes da empresa", variant: "destructive" });
+        setLoading(false);
+        return;
+      }
+      const { data: newCompany, error: companyError } = await supabase
+        .from("companies")
+        .insert({
+          name: newCompanyName.trim(),
+          cnpj: newCompanyCnpj || null,
+          address: newCompanyAddress || null,
+          website: newCompanyWebsite || null,
+          contact_id: finalContactId,
+          tenant_id: profile.tenant_id,
+          created_by: user.id,
+        })
+        .select("id")
+        .single();
+
+      if (companyError) {
+        toast({ title: "Erro ao criar empresa", description: companyError.message, variant: "destructive" });
+        setLoading(false);
+        return;
+      }
+      finalCompanyId = newCompany.id;
+    }
+
     const numImplantacao = valueImplantacao ? parseFloat(valueImplantacao) : null;
     const numSaas = valueSaas ? parseFloat(valueSaas) : null;
 
@@ -139,7 +181,7 @@ export function CreateOpportunityDialog({ open, onOpenChange, onCreated }: Props
       first_payment_date: firstPaymentDate ? format(firstPaymentDate, "yyyy-MM-dd") : null,
       notes: notes || null,
       contact_id: finalContactId,
-      company_id: companyId || null,
+      company_id: finalCompanyId,
       tenant_id: profile.tenant_id,
       assigned_to: user.id,
       created_by: user.id,
@@ -242,15 +284,30 @@ export function CreateOpportunityDialog({ open, onOpenChange, onCreated }: Props
 
           {/* Empresa (opcional) */}
           <div>
-            <Label>Empresa (opcional)</Label>
-            <Select value={companyId} onValueChange={setCompanyId}>
-              <SelectTrigger><SelectValue placeholder="Selecione..." /></SelectTrigger>
-              <SelectContent>
-                {companies.map((c) => (
-                  <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <div className="flex items-center justify-between mb-1">
+              <Label>Empresa (opcional)</Label>
+              <Button type="button" variant="ghost" size="sm" className="h-6 text-xs" onClick={() => { setShowNewCompany(!showNewCompany); if (!showNewCompany) setCompanyId(""); }}>
+                <Plus className="h-3 w-3 mr-1" />
+                {showNewCompany ? "Selecionar existente" : "Nova empresa"}
+              </Button>
+            </div>
+            {showNewCompany ? (
+              <div className="space-y-2 rounded-md border p-3">
+                <Input value={newCompanyName} onChange={(e) => setNewCompanyName(e.target.value)} placeholder="Nome da empresa *" />
+                <Input value={newCompanyCnpj} onChange={(e) => setNewCompanyCnpj(e.target.value)} placeholder="CNPJ" />
+                <Input value={newCompanyAddress} onChange={(e) => setNewCompanyAddress(e.target.value)} placeholder="Endereço" />
+                <Input value={newCompanyWebsite} onChange={(e) => setNewCompanyWebsite(e.target.value)} placeholder="Website" />
+              </div>
+            ) : (
+              <Select value={companyId} onValueChange={setCompanyId}>
+                <SelectTrigger><SelectValue placeholder="Selecione..." /></SelectTrigger>
+                <SelectContent>
+                  {companies.map((c) => (
+                    <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
           </div>
 
           {/* Observações */}
