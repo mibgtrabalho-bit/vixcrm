@@ -37,15 +37,15 @@ export function KanbanBoard() {
     const { data, error } = await supabase
       .from("opportunities")
       .select(`
-        id, title, value, value_implantacao, value_saas, stage, expected_close_date, notes,
+        id, title, value, value_implantacao, value_saas, stage, expected_close_date, notes, assigned_to,
         contacts:contact_id(name),
-        companies:company_id(name),
-        assigned_profile:assigned_to(id)
+        companies:company_id(name)
       `)
       .order("created_at", { ascending: true });
 
     if (error) {
       console.error("Error fetching opportunities:", error);
+      setLoading(false);
       return;
     }
 
