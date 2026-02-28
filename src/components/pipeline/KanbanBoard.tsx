@@ -37,7 +37,7 @@ export function KanbanBoard() {
     const { data, error } = await supabase
       .from("opportunities")
       .select(`
-        id, title, value, stage, expected_close_date, notes,
+        id, title, value, value_implantacao, value_saas, stage, expected_close_date, notes,
         contacts:contact_id(name),
         companies:company_id(name),
         assigned_profile:assigned_to(id)
@@ -53,6 +53,8 @@ export function KanbanBoard() {
       id: o.id,
       title: o.title,
       value: o.value,
+      value_implantacao: o.value_implantacao,
+      value_saas: o.value_saas,
       stage: o.stage,
       company_name: o.companies?.name,
       contact_name: o.contacts?.name,
@@ -70,8 +72,9 @@ export function KanbanBoard() {
     const newStage = destination.droppableId;
     const opp = opportunities.find((o) => o.id === draggableId);
 
-    // Rule: "proposta" requires value
-    if (newStage === "proposta" && (!opp?.value || opp.value <= 0)) {
+    // Rule: "proposta" requires at least one value > 0
+    const hasValue = (opp?.value_implantacao && opp.value_implantacao > 0) || (opp?.value_saas && opp.value_saas > 0) || (opp?.value && opp.value > 0);
+    if (newStage === "proposta" && !hasValue) {
       setPendingDrop(result);
       setValueDialog({
         open: true,
