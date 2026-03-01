@@ -65,7 +65,7 @@ export default function Dashboard() {
   const fetchStats = async () => {
     const { data: opps } = await supabase
       .from("opportunities")
-      .select("id, value, value_implantacao, value_saas, first_payment_date, stage");
+      .select("id, value, value_implantacao, value_saas, first_payment_date, stage, first_won_at");
 
     const opportunities = opps || [];
 
@@ -78,9 +78,10 @@ export default function Dashboard() {
     // Vendas projetadas (negociação)
     const vendasProjetadas = negociacao.reduce((s, o) => s + (Number(o.value) || 0), 0);
 
-    // Conversão: fechados / total (excluindo perdido)
-    const totalExclPerdido = opportunities.filter((o) => o.stage !== "perdido").length;
-    const conversao = totalExclPerdido > 0 ? (fechados.length / totalExclPerdido) * 100 : 0;
+    // Conversão: won (first_won_at set) / total created * 100
+    const totalCreated = opportunities.length;
+    const wonCount = opportunities.filter((o) => !!(o as any).first_won_at).length;
+    const conversao = totalCreated > 0 ? (wonCount / totalCreated) * 100 : 0;
 
     // Venda SaaS (fechado)
     const vendaSaas = fechados.reduce((s, o) => s + (Number(o.value_saas) || 0), 0);

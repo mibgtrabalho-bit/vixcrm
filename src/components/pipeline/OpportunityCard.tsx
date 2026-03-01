@@ -12,16 +12,22 @@ export interface Opportunity {
   assigned_to_name?: string;
   expected_close_date?: string;
   stage: string;
+  notes?: string;
+  contact_id?: string;
+  company_id?: string;
+  assigned_to?: string;
+  first_payment_date?: string;
 }
 
 interface Props {
   opportunity: Opportunity;
   index: number;
+  onClick?: (opp: Opportunity) => void;
 }
 
 const fmt = new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" });
 
-export function OpportunityCard({ opportunity, index }: Props) {
+export function OpportunityCard({ opportunity, index, onClick }: Props) {
   return (
     <Draggable draggableId={opportunity.id} index={index}>
       {(provided, snapshot) => (
@@ -29,7 +35,8 @@ export function OpportunityCard({ opportunity, index }: Props) {
           ref={provided.innerRef}
           {...provided.draggableProps}
           {...provided.dragHandleProps}
-          className={`rounded-lg border bg-card p-3 shadow-sm transition-shadow ${
+          onClick={() => onClick?.(opportunity)}
+          className={`rounded-lg border bg-card p-3 shadow-sm transition-shadow cursor-pointer ${
             snapshot.isDragging ? "shadow-lg ring-2 ring-primary/20" : "hover:shadow-md"
           }`}
         >

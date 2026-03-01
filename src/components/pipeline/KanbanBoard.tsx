@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { DragDropContext, DropResult } from "@hello-pangea/dnd";
 import { KanbanColumn } from "./KanbanColumn";
 import { Opportunity } from "./OpportunityCard";
+import { EditOpportunityDialog } from "./EditOpportunityDialog";
 import { PIPELINE_STAGES } from "@/lib/constants";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -20,6 +21,8 @@ import { Label } from "@/components/ui/label";
 export function KanbanBoard() {
   const [opportunities, setOpportunities] = useState<Opportunity[]>([]);
   const [loading, setLoading] = useState(true);
+  const [editingOpp, setEditingOpp] = useState<Opportunity | null>(null);
+  const [editOpen, setEditOpen] = useState(false);
   const [valueDialog, setValueDialog] = useState<{
     open: boolean;
     opportunityId: string;
@@ -37,7 +40,7 @@ export function KanbanBoard() {
     const { data, error } = await supabase
       .from("opportunities")
       .select(`
-        id, title, value, value_implantacao, value_saas, stage, expected_close_date, notes, assigned_to,
+        id, title, value, value_implantacao, value_saas, stage, expected_close_date, notes, assigned_to, contact_id, company_id, first_payment_date,
         contacts:contact_id(name),
         companies:company_id(name)
       `)
@@ -59,6 +62,11 @@ export function KanbanBoard() {
       company_name: o.companies?.name,
       contact_name: o.contacts?.name,
       expected_close_date: o.expected_close_date,
+      notes: o.notes,
+      contact_id: o.contact_id,
+      company_id: o.company_id,
+      assigned_to: o.assigned_to,
+      first_payment_date: o.first_payment_date,
     }));
 
     setOpportunities(mapped);
@@ -120,6 +128,17 @@ export function KanbanBoard() {
     setPendingDrop(null);
   };
 
+  const handleCardClick = (opp: Opportunity) => {
+    setEditingOpp(opp);
+    setEditOpen(true);
+  };
+
+  const handleOpportunityUpdated = (updated: Opportunity) => {
+    setOpportunities((prev) =>
+      prev.map((o) => (o.id === updated.id ? updated : o))
+    );
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center py-20">
@@ -139,6 +158,7 @@ export function KanbanBoard() {
               label={stage.label}
               color={stage.color.replace("var(--", "").replace(")", "")}
               opportunities={opportunities.filter((o) => o.stage === stage.id)}
+              onCardClick={handleCardClick}
             />
           ))}
         </div>
@@ -187,6 +207,13 @@ export function KanbanBoard() {
           </div>
         </DialogContent>
       </Dialog>
+
+      <EditOpportunityDialog
+        open={editOpen}
+        onOpenChange={setEditOpen}
+        opportunity={editingOpp}
+        onUpdated={handleOpportunityUpdated}
+      />
     </>
   );
 }
