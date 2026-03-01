@@ -121,6 +121,7 @@ export type Database = {
           created_by: string
           expected_close_date: string | null
           first_payment_date: string | null
+          first_won_at: string | null
           id: string
           notes: string | null
           stage: Database["public"]["Enums"]["pipeline_stage"]
@@ -139,6 +140,7 @@ export type Database = {
           created_by: string
           expected_close_date?: string | null
           first_payment_date?: string | null
+          first_won_at?: string | null
           id?: string
           notes?: string | null
           stage?: Database["public"]["Enums"]["pipeline_stage"]
@@ -157,6 +159,7 @@ export type Database = {
           created_by?: string
           expected_close_date?: string | null
           first_payment_date?: string | null
+          first_won_at?: string | null
           id?: string
           notes?: string | null
           stage?: Database["public"]["Enums"]["pipeline_stage"]

@@ -6,9 +6,10 @@ interface Props {
   label: string;
   color: string;
   opportunities: Opportunity[];
+  onCardClick?: (opp: Opportunity) => void;
 }
 
-export function KanbanColumn({ stageId, label, color, opportunities }: Props) {
+export function KanbanColumn({ stageId, label, color, opportunities, onCardClick }: Props) {
   const totalValue = opportunities.reduce((sum, o) => sum + (o.value || 0), 0);
 
   return (
@@ -47,7 +48,7 @@ export function KanbanColumn({ stageId, label, color, opportunities }: Props) {
             }`}
           >
             {opportunities.map((opp, index) => (
-              <OpportunityCard key={opp.id} opportunity={opp} index={index} />
+              <OpportunityCard key={opp.id} opportunity={opp} index={index} onClick={onCardClick} />
             ))}
             {provided.placeholder}
           </div>
