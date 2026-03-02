@@ -78,9 +78,9 @@ export default function Dashboard() {
     // Vendas projetadas (negociação)
     const vendasProjetadas = negociacao.reduce((s, o) => s + (Number(o.value) || 0), 0);
 
-    // Conversão: closed (first_closed_at set) / total created * 100
+    // Conversão: closed (stage=fechado OR first_closed_at set) / total created * 100
     const totalCreated = opportunities.length;
-    const closedCount = opportunities.filter((o) => !!(o as any).first_closed_at).length;
+    const closedCount = opportunities.filter((o) => o.stage === "fechado" || !!o.first_closed_at).length;
     const conversao = totalCreated > 0 ? (closedCount / totalCreated) * 100 : 0;
 
     // Venda SaaS (fechado)
