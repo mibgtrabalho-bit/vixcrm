@@ -36,11 +36,11 @@ export function OpportunityCard({ opportunity, index, onClick }: Props) {
           {...provided.draggableProps}
           {...provided.dragHandleProps}
           onClick={() => onClick?.(opportunity)}
-          className={`rounded-lg border bg-card p-3 shadow-sm transition-shadow cursor-pointer ${
-            snapshot.isDragging ? "shadow-lg ring-2 ring-primary/20" : "hover:shadow-md"
+          className={`rounded-xl border border-border/50 bg-card p-3.5 shadow-xs transition-apple cursor-pointer ${
+            snapshot.isDragging ? "shadow-lg ring-2 ring-primary/15 scale-[1.02]" : "hover:shadow-sm hover:border-border"
           }`}
         >
-          <h4 className="text-sm font-medium text-foreground leading-tight">
+          <h4 className="text-[13px] font-medium text-foreground leading-tight">
             {opportunity.title}
           </h4>
 
@@ -52,7 +52,7 @@ export function OpportunityCard({ opportunity, index, onClick }: Props) {
           )}
 
           {(opportunity.value_implantacao || opportunity.value_saas) ? (
-            <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-0.5 text-xs font-medium text-foreground">
+            <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-0.5 text-xs font-medium text-foreground">
               {opportunity.value_implantacao != null && opportunity.value_implantacao > 0 && (
                 <span className="flex items-center gap-1">
                   <DollarSign className="h-3 w-3 text-[hsl(var(--success))]" />
@@ -67,21 +67,21 @@ export function OpportunityCard({ opportunity, index, onClick }: Props) {
               )}
             </div>
           ) : opportunity.value != null && opportunity.value > 0 ? (
-            <div className="mt-1.5 flex items-center gap-1.5 text-xs font-medium text-foreground">
+            <div className="mt-2 flex items-center gap-1.5 text-xs font-medium text-foreground">
               <DollarSign className="h-3 w-3 text-[hsl(var(--success))]" />
               <span>{fmt.format(opportunity.value)}</span>
             </div>
           ) : null}
 
-          <div className="mt-2 flex items-center justify-between">
+          <div className="mt-2.5 flex items-center justify-between">
             {opportunity.assigned_to_name && (
-              <div className="flex items-center gap-1 text-xs text-muted-foreground">
+              <div className="flex items-center gap-1 text-[11px] text-muted-foreground">
                 <User className="h-3 w-3" />
                 <span className="truncate max-w-[80px]">{opportunity.assigned_to_name}</span>
               </div>
             )}
             {opportunity.expected_close_date && (
-              <div className="flex items-center gap-1 text-xs text-muted-foreground">
+              <div className="flex items-center gap-1 text-[11px] text-muted-foreground">
                 <Calendar className="h-3 w-3" />
                 <span>
                   {new Date(opportunity.expected_close_date).toLocaleDateString("pt-BR", {

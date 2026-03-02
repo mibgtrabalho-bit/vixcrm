@@ -18,19 +18,19 @@ export default function Pipeline() {
   return (
     <AppLayout>
       <PageHeader title="Pipeline" description="Gerencie suas oportunidades de venda">
-        <div className="flex items-center gap-1 rounded-lg border bg-muted p-0.5">
+        <div className="flex items-center gap-0.5 rounded-lg border border-border/60 bg-muted/50 p-0.5">
           <button
             onClick={() => setViewMode("kanban")}
-            className={`rounded-md p-1.5 transition-colors ${
-              viewMode === "kanban" ? "bg-background shadow-sm" : "text-muted-foreground hover:text-foreground"
+            className={`rounded-md p-1.5 transition-apple ${
+              viewMode === "kanban" ? "bg-background shadow-xs text-foreground" : "text-muted-foreground hover:text-foreground"
             }`}
           >
             <LayoutGrid className="h-4 w-4" />
           </button>
           <button
             onClick={() => setViewMode("list")}
-            className={`rounded-md p-1.5 transition-colors ${
-              viewMode === "list" ? "bg-background shadow-sm" : "text-muted-foreground hover:text-foreground"
+            className={`rounded-md p-1.5 transition-apple ${
+              viewMode === "list" ? "bg-background shadow-xs text-foreground" : "text-muted-foreground hover:text-foreground"
             }`}
           >
             <List className="h-4 w-4" />
