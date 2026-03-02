@@ -7,6 +7,7 @@ import { PIPELINE_STAGES } from "@/lib/constants";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
+import { Skeleton } from "@/components/ui/skeleton";
 import {
   Dialog,
   DialogContent,
@@ -17,6 +18,22 @@ import {
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
+
+function KanbanSkeleton() {
+  return (
+    <div className="flex gap-3 overflow-x-auto px-6 py-4">
+      {Array.from({ length: 5 }).map((_, i) => (
+        <div key={i} className="flex w-72 shrink-0 flex-col rounded-xl bg-muted/40 p-3">
+          <Skeleton className="h-5 w-24 rounded-lg mb-3" />
+          <div className="space-y-2">
+            <Skeleton className="h-20 w-full rounded-xl" />
+            <Skeleton className="h-20 w-full rounded-xl" />
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
 
 export function KanbanBoard() {
   const [opportunities, setOpportunities] = useState<Opportunity[]>([]);
@@ -80,7 +97,6 @@ export function KanbanBoard() {
     const newStage = destination.droppableId;
     const opp = opportunities.find((o) => o.id === draggableId);
 
-    // Rule: "proposta" requires at least one value > 0
     const hasValue = (opp?.value_implantacao && opp.value_implantacao > 0) || (opp?.value_saas && opp.value_saas > 0) || (opp?.value && opp.value > 0);
     if (newStage === "proposta" && !hasValue) {
       setPendingDrop(result);
@@ -140,11 +156,7 @@ export function KanbanBoard() {
   };
 
   if (loading) {
-    return (
-      <div className="flex items-center justify-center py-20">
-        <div className="h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent" />
-      </div>
-    );
+    return <KanbanSkeleton />;
   }
 
   return (

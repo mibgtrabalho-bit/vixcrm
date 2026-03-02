@@ -13,21 +13,21 @@ export function KanbanColumn({ stageId, label, color, opportunities, onCardClick
   const totalValue = opportunities.reduce((sum, o) => sum + (o.value || 0), 0);
 
   return (
-    <div className="flex w-72 shrink-0 flex-col rounded-lg bg-muted/50">
+    <div className="flex w-72 shrink-0 flex-col rounded-xl bg-muted/40">
       {/* Header */}
-      <div className="flex items-center justify-between px-3 py-2.5">
+      <div className="flex items-center justify-between px-3.5 py-3">
         <div className="flex items-center gap-2">
           <div
-            className="h-2.5 w-2.5 rounded-full"
+            className="h-2 w-2 rounded-full"
             style={{ backgroundColor: `hsl(${color})` }}
           />
-          <span className="text-sm font-medium text-foreground">{label}</span>
-          <span className="flex h-5 min-w-[20px] items-center justify-center rounded-full bg-muted px-1.5 text-xs text-muted-foreground">
+          <span className="text-[13px] font-medium text-foreground">{label}</span>
+          <span className="flex h-5 min-w-[20px] items-center justify-center rounded-full bg-background px-1.5 text-[11px] font-medium text-muted-foreground shadow-xs">
             {opportunities.length}
           </span>
         </div>
         {totalValue > 0 && (
-          <span className="text-xs text-muted-foreground">
+          <span className="text-[11px] font-medium text-muted-foreground">
             {new Intl.NumberFormat("pt-BR", {
               style: "currency",
               currency: "BRL",
@@ -43,7 +43,7 @@ export function KanbanColumn({ stageId, label, color, opportunities, onCardClick
           <div
             ref={provided.innerRef}
             {...provided.droppableProps}
-            className={`flex-1 space-y-2 overflow-y-auto px-2 pb-2 min-h-[100px] transition-colors rounded-b-lg ${
+            className={`flex-1 space-y-2 overflow-y-auto px-2 pb-2 min-h-[100px] transition-apple rounded-b-xl ${
               snapshot.isDraggingOver ? "bg-primary/5" : ""
             }`}
           >

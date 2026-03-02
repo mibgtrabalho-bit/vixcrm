@@ -58,34 +58,34 @@ export default function Auth() {
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-background p-4">
-      <div className="w-full max-w-md">
+      <div className="w-full max-w-sm">
         <div className="mb-8 text-center">
-          <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-xl bg-primary">
-            <Building2 className="h-6 w-6 text-primary-foreground" />
+          <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-2xl bg-foreground">
+            <Building2 className="h-6 w-6 text-background" />
           </div>
-          <h1 className="text-2xl font-bold text-foreground">SalesCRM</h1>
-          <p className="mt-1 text-sm text-muted-foreground">
+          <h1 className="text-xl font-semibold tracking-tight text-foreground">SalesCRM</h1>
+          <p className="mt-1 text-[13px] text-muted-foreground">
             Gerencie seu funil de vendas
           </p>
         </div>
 
         <Card>
           <CardHeader className="pb-4">
-            <CardTitle className="text-lg">
+            <CardTitle className="text-base">
               {isLogin ? "Entrar" : "Criar conta"}
             </CardTitle>
-            <CardDescription>
+            <CardDescription className="text-[13px]">
               {isLogin
                 ? "Entre com suas credenciais"
                 : "Crie sua empresa e comece a vender"}
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <form onSubmit={handleSubmit} className="space-y-4">
+            <form onSubmit={handleSubmit} className="space-y-3">
               {!isLogin && (
                 <>
                   <div className="relative">
-                    <User className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                    <User className="absolute left-3.5 top-3.5 h-4 w-4 text-muted-foreground" />
                     <Input
                       placeholder="Seu nome completo"
                       value={fullName}
@@ -95,7 +95,7 @@ export default function Auth() {
                     />
                   </div>
                   <div className="relative">
-                    <Building2 className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                    <Building2 className="absolute left-3.5 top-3.5 h-4 w-4 text-muted-foreground" />
                     <Input
                       placeholder="Nome da empresa"
                       value={companyName}
@@ -107,7 +107,7 @@ export default function Auth() {
                 </>
               )}
               <div className="relative">
-                <Mail className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                <Mail className="absolute left-3.5 top-3.5 h-4 w-4 text-muted-foreground" />
                 <Input
                   type="email"
                   placeholder="E-mail"
@@ -118,7 +118,7 @@ export default function Auth() {
                 />
               </div>
               <div className="relative">
-                <Lock className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                <Lock className="absolute left-3.5 top-3.5 h-4 w-4 text-muted-foreground" />
                 <Input
                   type="password"
                   placeholder="Senha"
@@ -138,7 +138,7 @@ export default function Auth() {
               <button
                 type="button"
                 onClick={() => setIsLogin(!isLogin)}
-                className="text-sm text-primary hover:underline"
+                className="text-[13px] text-primary transition-apple hover:underline"
               >
                 {isLogin ? "Não tem conta? Criar agora" : "Já tem conta? Entrar"}
               </button>

@@ -32,31 +32,31 @@ export function AppSidebar() {
   return (
     <aside
       className={cn(
-        "flex h-screen flex-col border-r bg-sidebar text-sidebar-foreground transition-all duration-300",
-        collapsed ? "w-16" : "w-60"
+        "flex h-screen flex-col border-r border-sidebar-border bg-sidebar text-sidebar-foreground transition-apple",
+        collapsed ? "w-[68px]" : "w-60"
       )}
     >
       {/* Logo */}
-      <div className="flex h-14 items-center justify-between border-b border-sidebar-border px-4">
+      <div className="flex h-14 items-center justify-between px-4">
         {!collapsed && (
-          <span className="text-lg font-bold text-sidebar-primary-foreground">
+          <span className="text-base font-semibold tracking-tight text-sidebar-foreground">
             SalesCRM
           </span>
         )}
         <button
           onClick={() => setCollapsed(!collapsed)}
-          className="rounded-md p-1 hover:bg-sidebar-accent"
+          className="rounded-lg p-1.5 transition-apple hover:bg-sidebar-accent"
         >
           {collapsed ? (
-            <ChevronRight className="h-4 w-4" />
+            <ChevronRight className="h-4 w-4 text-muted-foreground" />
           ) : (
-            <ChevronLeft className="h-4 w-4" />
+            <ChevronLeft className="h-4 w-4 text-muted-foreground" />
           )}
         </button>
       </div>
 
       {/* Navigation */}
-      <nav className="flex-1 space-y-1 p-2">
+      <nav className="flex-1 space-y-0.5 px-3 pt-2">
         {navItems.map((item) => {
           const isActive = location.pathname === item.href;
           return (
@@ -64,13 +64,13 @@ export function AppSidebar() {
               key={item.href}
               to={item.href}
               className={cn(
-                "flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors",
+                "flex items-center gap-3 rounded-lg px-3 py-2 text-[13px] font-medium transition-apple",
                 isActive
-                  ? "bg-sidebar-accent text-sidebar-primary-foreground font-medium"
-                  : "text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-foreground"
+                  ? "bg-sidebar-accent text-sidebar-foreground shadow-xs"
+                  : "text-muted-foreground hover:bg-sidebar-accent hover:text-sidebar-foreground"
               )}
             >
-              <item.icon className="h-4 w-4 shrink-0" />
+              <item.icon className="h-[18px] w-[18px] shrink-0" />
               {!collapsed && <span>{item.label}</span>}
             </Link>
           );
@@ -80,13 +80,13 @@ export function AppSidebar() {
       {/* User */}
       <div className="border-t border-sidebar-border p-3">
         <div className="flex items-center gap-3">
-          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-sidebar-accent text-xs font-medium">
+          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-sidebar-accent text-xs font-semibold text-sidebar-foreground">
             {profile?.full_name?.charAt(0)?.toUpperCase() || "U"}
           </div>
           {!collapsed && (
             <div className="flex-1 overflow-hidden">
-              <p className="truncate text-sm font-medium">{profile?.full_name}</p>
-              <p className="truncate text-xs text-sidebar-foreground/60 capitalize">{role}</p>
+              <p className="truncate text-[13px] font-medium text-sidebar-foreground">{profile?.full_name}</p>
+              <p className="truncate text-xs text-muted-foreground capitalize">{role}</p>
             </div>
           )}
           {!collapsed && (
@@ -94,7 +94,7 @@ export function AppSidebar() {
               variant="ghost"
               size="icon"
               onClick={signOut}
-              className="h-8 w-8 shrink-0 text-sidebar-foreground/60 hover:text-sidebar-foreground"
+              className="h-8 w-8 shrink-0 text-muted-foreground hover:text-sidebar-foreground"
             >
               <LogOut className="h-4 w-4" />
             </Button>
