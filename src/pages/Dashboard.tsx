@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -14,6 +14,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
+import { useQuery } from "@tanstack/react-query";
 import { DollarSign, TrendingUp, BarChart3, Repeat, Settings2, Zap, Target } from "lucide-react";
 
 type WidgetId = "vendas_realizadas" | "vendas_projetadas" | "conversao" | "venda_saas" | "venda_implantacao" | "arr";
@@ -37,6 +38,54 @@ const ALL_WIDGETS: WidgetDef[] = [
 const STORAGE_KEY = "dashboard_widgets";
 const DEFAULT_WIDGETS: WidgetId[] = ["vendas_realizadas", "vendas_projetadas", "conversao", "arr"];
 
+async function fetchDashboardStats() {
+  const { data: opps } = await supabase
+    .from("opportunities")
+    .select("id, value, value_implantacao, value_saas, first_payment_date, stage");
+
+  const opportunities = opps || [];
+
+  const fechados = opportunities.filter((o) => o.stage === "fechado");
+  const negociacao = opportunities.filter((o) => o.stage === "negociacao");
+
+  const vendasRealizadas = fechados.reduce((s, o) => s + (Number(o.value) || 0), 0);
+  const vendasProjetadas = negociacao.reduce((s, o) => s + (Number(o.value) || 0), 0);
+
+  // Conversão: ONLY current stage = fechado / total
+  const total = opportunities.length;
+  const closedCount = fechados.length;
+  const conversao = total > 0 ? (closedCount / total) * 100 : 0;
+
+  const vendaSaas = fechados.reduce((s, o) => s + (Number(o.value_saas) || 0), 0);
+  const vendaImpl = fechados.reduce((s, o) => s + (Number(o.value_implantacao) || 0), 0);
+
+  // ARR
+  const currentYear = new Date().getFullYear();
+  const endOfYear = new Date(currentYear, 11, 31);
+  let arr = 0;
+  for (const o of fechados) {
+    arr += Number(o.value_implantacao) || 0;
+    const saasMonthly = Number(o.value_saas) || 0;
+    if (saasMonthly > 0 && o.first_payment_date) {
+      const firstDate = new Date(o.first_payment_date);
+      if (firstDate <= endOfYear) {
+        const startMonth = firstDate.getFullYear() === currentYear ? firstDate.getMonth() : 0;
+        const months = 12 - startMonth;
+        arr += saasMonthly * months;
+      }
+    }
+  }
+
+  return {
+    vendas_realizadas: vendasRealizadas,
+    vendas_projetadas: vendasProjetadas,
+    conversao,
+    venda_saas: vendaSaas,
+    venda_implantacao: vendaImpl,
+    arr,
+  } as Record<WidgetId, number>;
+}
+
 export default function Dashboard() {
   const { profile } = useAuth();
   const [configOpen, setConfigOpen] = useState(false);
@@ -49,77 +98,25 @@ export default function Dashboard() {
     }
   });
   const [tempSelection, setTempSelection] = useState<WidgetId[]>([]);
-  const [values, setValues] = useState<Record<WidgetId, number>>({
-    vendas_realizadas: 0,
-    vendas_projetadas: 0,
-    conversao: 0,
-    venda_saas: 0,
-    venda_implantacao: 0,
-    arr: 0,
+
+  const { data: values } = useQuery({
+    queryKey: ["dashboard-stats"],
+    queryFn: fetchDashboardStats,
+    enabled: !!profile?.tenant_id,
+    staleTime: 0,
+    refetchOnWindowFocus: true,
+    initialData: {
+      vendas_realizadas: 0,
+      vendas_projetadas: 0,
+      conversao: 0,
+      venda_saas: 0,
+      venda_implantacao: 0,
+      arr: 0,
+    },
   });
 
-  useEffect(() => {
-    if (profile?.tenant_id) fetchStats();
-  }, [profile?.tenant_id]);
-
-  const fetchStats = async () => {
-    const { data: opps } = await supabase
-      .from("opportunities")
-      .select("id, value, value_implantacao, value_saas, first_payment_date, stage, first_closed_at");
-
-    const opportunities = opps || [];
-
-    const fechados = opportunities.filter((o) => o.stage === "fechado");
-    const negociacao = opportunities.filter((o) => o.stage === "negociacao");
-
-    // Vendas realizadas (fechado)
-    const vendasRealizadas = fechados.reduce((s, o) => s + (Number(o.value) || 0), 0);
-
-    // Vendas projetadas (negociação)
-    const vendasProjetadas = negociacao.reduce((s, o) => s + (Number(o.value) || 0), 0);
-
-    // Conversão: closed (stage=fechado OR first_closed_at set) / total created * 100
-    const totalCreated = opportunities.length;
-    const closedCount = opportunities.filter((o) => o.stage === "fechado" || !!o.first_closed_at).length;
-    const conversao = totalCreated > 0 ? (closedCount / totalCreated) * 100 : 0;
-
-    // Venda SaaS (fechado)
-    const vendaSaas = fechados.reduce((s, o) => s + (Number(o.value_saas) || 0), 0);
-
-    // Venda Implantação (fechado)
-    const vendaImpl = fechados.reduce((s, o) => s + (Number(o.value_implantacao) || 0), 0);
-
-    // ARR: Implantação + SaaS mensalidades até fim do ano
-    const currentYear = new Date().getFullYear();
-    const endOfYear = new Date(currentYear, 11, 31);
-
-    let arr = 0;
-    for (const o of fechados) {
-      arr += Number(o.value_implantacao) || 0;
-      const saasMonthly = Number(o.value_saas) || 0;
-      if (saasMonthly > 0 && o.first_payment_date) {
-        const firstDate = new Date(o.first_payment_date);
-        if (firstDate <= endOfYear) {
-          // Count months from first payment to end of year
-          const startMonth = firstDate.getFullYear() === currentYear ? firstDate.getMonth() : 0;
-          const months = 12 - startMonth;
-          arr += saasMonthly * months;
-        }
-      }
-    }
-
-    setValues({
-      vendas_realizadas: vendasRealizadas,
-      vendas_projetadas: vendasProjetadas,
-      conversao,
-      venda_saas: vendaSaas,
-      venda_implantacao: vendaImpl,
-      arr,
-    });
-  };
-
   const formatValue = (val: number, format: "currency" | "percent") => {
-    if (format === "percent") return `${val.toFixed(1)}%`;
+    if (format === "percent") return `${val.toFixed(1).replace(".", ",")}%`;
     return new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(val);
   };
 
