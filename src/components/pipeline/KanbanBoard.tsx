@@ -7,6 +7,7 @@ import { PIPELINE_STAGES } from "@/lib/constants";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
+import { useQueryClient } from "@tanstack/react-query";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   Dialog,
@@ -48,6 +49,7 @@ export function KanbanBoard() {
   const [pendingDrop, setPendingDrop] = useState<DropResult | null>(null);
   const { profile } = useAuth();
   const { toast } = useToast();
+  const queryClient = useQueryClient();
 
   useEffect(() => {
     if (profile?.tenant_id) fetchOpportunities();
@@ -112,6 +114,14 @@ export function KanbanBoard() {
   };
 
   const moveOpportunity = async (id: string, newStage: string, newValue?: number) => {
+    // Optimistic update
+    const previousOpps = [...opportunities];
+    setOpportunities((prev) =>
+      prev.map((o) =>
+        o.id === id ? { ...o, stage: newStage, ...(newValue != null ? { value: newValue } : {}) } : o
+      )
+    );
+
     const updateData: any = { stage: newStage };
     if (newValue != null) updateData.value = newValue;
 
@@ -121,15 +131,14 @@ export function KanbanBoard() {
       .eq("id", id);
 
     if (error) {
+      // Rollback on failure
+      setOpportunities(previousOpps);
       toast({ title: "Erro ao mover", description: error.message, variant: "destructive" });
       return;
     }
 
-    setOpportunities((prev) =>
-      prev.map((o) =>
-        o.id === id ? { ...o, stage: newStage, ...(newValue != null ? { value: newValue } : {}) } : o
-      )
-    );
+    // Invalidate dashboard stats so conversion updates immediately
+    queryClient.invalidateQueries({ queryKey: ["dashboard-stats"] });
   };
 
   const handleValueSubmit = async () => {
@@ -153,6 +162,8 @@ export function KanbanBoard() {
     setOpportunities((prev) =>
       prev.map((o) => (o.id === updated.id ? updated : o))
     );
+    // Also invalidate dashboard when editing an opportunity
+    queryClient.invalidateQueries({ queryKey: ["dashboard-stats"] });
   };
 
   if (loading) {
