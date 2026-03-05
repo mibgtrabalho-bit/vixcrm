@@ -21,6 +21,8 @@ export type Database = {
           contact_id: string
           created_at: string
           created_by: string
+          deleted_at: string | null
+          deleted_by: string | null
           id: string
           name: string
           tenant_id: string
@@ -33,6 +35,8 @@ export type Database = {
           contact_id: string
           created_at?: string
           created_by: string
+          deleted_at?: string | null
+          deleted_by?: string | null
           id?: string
           name: string
           tenant_id: string
@@ -45,6 +49,8 @@ export type Database = {
           contact_id?: string
           created_at?: string
           created_by?: string
+          deleted_at?: string | null
+          deleted_by?: string | null
           id?: string
           name?: string
           tenant_id?: string
@@ -73,6 +79,8 @@ export type Database = {
           created_at: string
           created_by: string
           custom_fields: Json | null
+          deleted_at: string | null
+          deleted_by: string | null
           email: string | null
           id: string
           name: string
@@ -84,6 +92,8 @@ export type Database = {
           created_at?: string
           created_by: string
           custom_fields?: Json | null
+          deleted_at?: string | null
+          deleted_by?: string | null
           email?: string | null
           id?: string
           name: string
@@ -95,6 +105,8 @@ export type Database = {
           created_at?: string
           created_by?: string
           custom_fields?: Json | null
+          deleted_at?: string | null
+          deleted_by?: string | null
           email?: string | null
           id?: string
           name?: string
@@ -157,6 +169,8 @@ export type Database = {
           contact_id: string | null
           created_at: string
           created_by: string
+          deleted_at: string | null
+          deleted_by: string | null
           expected_close_date: string | null
           first_closed_at: string | null
           first_payment_date: string | null
@@ -176,6 +190,8 @@ export type Database = {
           contact_id?: string | null
           created_at?: string
           created_by: string
+          deleted_at?: string | null
+          deleted_by?: string | null
           expected_close_date?: string | null
           first_closed_at?: string | null
           first_payment_date?: string | null
@@ -195,6 +211,8 @@ export type Database = {
           contact_id?: string | null
           created_at?: string
           created_by?: string
+          deleted_at?: string | null
+          deleted_by?: string | null
           expected_close_date?: string | null
           first_closed_at?: string | null
           first_payment_date?: string | null

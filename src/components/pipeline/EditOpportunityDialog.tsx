@@ -23,13 +23,25 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
-import { CalendarIcon } from "lucide-react";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
+import { CalendarIcon, Trash2 } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
+import { useQueryClient } from "@tanstack/react-query";
 import { PIPELINE_STAGES } from "@/lib/constants";
 import type { Opportunity } from "./OpportunityCard";
 
@@ -38,9 +50,10 @@ interface Props {
   onOpenChange: (open: boolean) => void;
   opportunity: Opportunity | null;
   onUpdated: (updated: Opportunity) => void;
+  onDeleted?: (id: string) => void;
 }
 
-export function EditOpportunityDialog({ open, onOpenChange, opportunity, onUpdated }: Props) {
+export function EditOpportunityDialog({ open, onOpenChange, opportunity, onUpdated, onDeleted }: Props) {
   const [title, setTitle] = useState("");
   const [stage, setStage] = useState("");
   const [valueImplantacao, setValueImplantacao] = useState("");
@@ -54,9 +67,11 @@ export function EditOpportunityDialog({ open, onOpenChange, opportunity, onUpdat
   const [companies, setCompanies] = useState<{ id: string; name: string }[]>([]);
   const [teamMembers, setTeamMembers] = useState<{ user_id: string; full_name: string }[]>([]);
   const [loading, setLoading] = useState(false);
+  const [deleting, setDeleting] = useState(false);
   const [expectedCloseDate, setExpectedCloseDate] = useState<Date>();
 
   const { user, profile, role } = useAuth();
+  const queryClient = useQueryClient();
   const { toast } = useToast();
 
   const canChangeOwner = role === "gestor" || role === "diretor";
@@ -253,9 +268,51 @@ export function EditOpportunityDialog({ open, onOpenChange, opportunity, onUpdat
             <Textarea id="edit-notes" value={notes} onChange={(e) => setNotes(e.target.value)} rows={2} />
           </div>
 
-          <div className="flex justify-end gap-2 pt-2">
-            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>Cancelar</Button>
-            <Button type="submit" disabled={loading}>{loading ? "Salvando..." : "Salvar"}</Button>
+          <div className="flex justify-between gap-2 pt-2">
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <Button type="button" variant="destructive" size="sm" disabled={deleting}>
+                  <Trash2 className="h-4 w-4 mr-1" />
+                  Excluir
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Excluir oportunidade?</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    Esta ação irá remover a oportunidade do pipeline. Ela poderá ser restaurada posteriormente.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                  <AlertDialogAction
+                    onClick={async () => {
+                      if (!opportunity || !user) return;
+                      setDeleting(true);
+                      const { error } = await supabase
+                        .from("opportunities")
+                        .update({ deleted_at: new Date().toISOString(), deleted_by: user.id })
+                        .eq("id", opportunity.id);
+                      if (error) {
+                        toast({ title: "Erro ao excluir", description: error.message, variant: "destructive" });
+                      } else {
+                        toast({ title: "Oportunidade excluída" });
+                        onDeleted?.(opportunity.id);
+                        queryClient.invalidateQueries({ queryKey: ["dashboard-stats"] });
+                        onOpenChange(false);
+                      }
+                      setDeleting(false);
+                    }}
+                  >
+                    Confirmar
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
+            <div className="flex gap-2">
+              <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>Cancelar</Button>
+              <Button type="submit" disabled={loading}>{loading ? "Salvando..." : "Salvar"}</Button>
+            </div>
           </div>
         </form>
       </DialogContent>

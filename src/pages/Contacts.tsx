@@ -22,7 +22,18 @@ import {
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, Search, Mail, Phone } from "lucide-react";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
+import { Plus, Search, Mail, Phone, Trash2 } from "lucide-react";
 
 interface Contact {
   id: string;
@@ -115,12 +126,13 @@ export default function Contacts() {
                 <TableHead>E-mail</TableHead>
                 <TableHead>Telefone</TableHead>
                 <TableHead>Criado em</TableHead>
+                <TableHead className="w-12"></TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {filtered.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={4} className="text-center py-8 text-muted-foreground">
+                  <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
                     Nenhum contato encontrado
                   </TableCell>
                 </TableRow>
@@ -146,6 +158,30 @@ export default function Contacts() {
                     </TableCell>
                     <TableCell className="text-sm text-muted-foreground">
                       {new Date(c.created_at).toLocaleDateString("pt-BR")}
+                    </TableCell>
+                    <TableCell>
+                      <AlertDialog>
+                        <AlertDialogTrigger asChild>
+                          <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-destructive">
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </AlertDialogTrigger>
+                        <AlertDialogContent>
+                          <AlertDialogHeader>
+                            <AlertDialogTitle>Excluir contato?</AlertDialogTitle>
+                            <AlertDialogDescription>Esta ação irá remover o contato da lista. Ele poderá ser restaurado posteriormente.</AlertDialogDescription>
+                          </AlertDialogHeader>
+                          <AlertDialogFooter>
+                            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                            <AlertDialogAction onClick={async () => {
+                              if (!user) return;
+                              const { error } = await supabase.from("contacts").update({ deleted_at: new Date().toISOString(), deleted_by: user.id }).eq("id", c.id);
+                              if (error) { toast({ title: "Erro", description: error.message, variant: "destructive" }); }
+                              else { toast({ title: "Contato excluído" }); fetchContacts(); }
+                            }}>Confirmar</AlertDialogAction>
+                          </AlertDialogFooter>
+                        </AlertDialogContent>
+                      </AlertDialog>
                     </TableCell>
                   </TableRow>
                 ))

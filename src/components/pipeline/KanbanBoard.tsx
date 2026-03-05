@@ -162,7 +162,11 @@ export function KanbanBoard() {
     setOpportunities((prev) =>
       prev.map((o) => (o.id === updated.id ? updated : o))
     );
-    // Also invalidate dashboard when editing an opportunity
+    queryClient.invalidateQueries({ queryKey: ["dashboard-stats"] });
+  };
+
+  const handleOpportunityDeleted = (id: string) => {
+    setOpportunities((prev) => prev.filter((o) => o.id !== id));
     queryClient.invalidateQueries({ queryKey: ["dashboard-stats"] });
   };
 
@@ -236,6 +240,7 @@ export function KanbanBoard() {
         onOpenChange={setEditOpen}
         opportunity={editingOpp}
         onUpdated={handleOpportunityUpdated}
+        onDeleted={handleOpportunityDeleted}
       />
     </>
   );
