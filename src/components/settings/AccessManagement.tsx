@@ -169,7 +169,8 @@ export function AccessManagement() {
   const handleInvite = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!user || !profile) return;
-    if (!inviteTeamId) {
+    const needsTeam = inviteRole !== "diretor";
+    if (needsTeam && !inviteTeamId) {
       toast({ title: "Time obrigatório", description: "Selecione um time para o convite.", variant: "destructive" });
       return;
     }
@@ -178,11 +179,11 @@ export function AccessManagement() {
     const { data, error } = await supabase
       .from("invitations")
       .insert({
-        tenant_id: profile.tenant_id,
-        email: inviteEmail,
-        role: inviteRole as any,
-        team_id: inviteTeamId,
-        invited_by: user.id,
+      tenant_id: profile.tenant_id,
+      email: inviteEmail,
+      role: inviteRole as any,
+      team_id: inviteRole === "diretor" ? null : inviteTeamId,
+      invited_by: user.id,
       })
       .select("token")
       .single();
@@ -267,8 +268,10 @@ export function AccessManagement() {
   }
 
   const availableRoles = isDirector
-    ? [{ value: "vendedor", label: "Vendedor" }, { value: "gestor", label: "Gestor" }]
+    ? [{ value: "vendedor", label: "Vendedor" }, { value: "gestor", label: "Gestor" }, { value: "diretor", label: "Diretor" }]
     : [{ value: "vendedor", label: "Vendedor" }];
+
+  const teamRequired = inviteRole !== "diretor";
 
   return (
     <div className="space-y-6">
@@ -492,17 +495,19 @@ export function AccessManagement() {
                   </SelectContent>
                 </Select>
               </div>
-              <div>
-                <Label>Time *</Label>
-                <Select value={inviteTeamId} onValueChange={setInviteTeamId}>
-                  <SelectTrigger><SelectValue placeholder="Selecione o time..." /></SelectTrigger>
-                  <SelectContent>
-                    {teams.map((t) => (
-                      <SelectItem key={t.id} value={t.id}>{t.name}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
+              {teamRequired && (
+                <div>
+                  <Label>Time *</Label>
+                  <Select value={inviteTeamId} onValueChange={setInviteTeamId}>
+                    <SelectTrigger><SelectValue placeholder="Selecione o time..." /></SelectTrigger>
+                    <SelectContent>
+                      {teams.map((t) => (
+                        <SelectItem key={t.id} value={t.id}>{t.name}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
               <div className="flex justify-end gap-2">
                 <Button variant="outline" type="button" onClick={() => setInviteOpen(false)}>Cancelar</Button>
                 <Button type="submit" disabled={inviteLoading}>
