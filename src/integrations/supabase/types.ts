@@ -461,6 +461,26 @@ export type Database = {
         }
         Returns: boolean
       }
+      is_in_managed_team: {
+        Args: { _manager_id: string; _target_user_id: string }
+        Returns: boolean
+      }
+      manager_visible_company_ids: {
+        Args: { _manager_id: string }
+        Returns: string[]
+      }
+      manager_visible_contact_ids: {
+        Args: { _manager_id: string }
+        Returns: string[]
+      }
+      user_visible_company_ids: {
+        Args: { _user_id: string }
+        Returns: string[]
+      }
+      user_visible_contact_ids: {
+        Args: { _user_id: string }
+        Returns: string[]
+      }
     }
     Enums: {
       app_role: "vendedor" | "gestor" | "diretor"
