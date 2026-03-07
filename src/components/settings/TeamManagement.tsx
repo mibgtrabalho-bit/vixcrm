@@ -14,6 +14,17 @@ import {
   DialogDescription,
 } from "@/components/ui/dialog";
 import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
+import {
   Select,
   SelectContent,
   SelectItem,
@@ -34,14 +45,14 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from "@/components/ui/accordion";
-import { Plus, Pencil, UserPlus, UserMinus, Users } from "lucide-react";
+import { Plus, Pencil, UserPlus, UserMinus, Users, Trash2 } from "lucide-react";
 
 interface MemberInfo {
   user_id: string;
   full_name: string;
   email: string;
   role: string | null;
-  membership_id: string | null; // team_members.id for this team
+  membership_id: string | null;
 }
 
 interface TeamRow {
@@ -59,7 +70,7 @@ interface UnassignedUser {
 }
 
 export function TeamManagement() {
-  const { profile, role } = useAuth();
+  const { user, profile, role } = useAuth();
   const { toast } = useToast();
   const isDirector = role === "diretor";
 
@@ -98,7 +109,6 @@ export function TeamManagement() {
       (profiles || []).map((p: any) => [p.user_id, { full_name: p.full_name, email: p.email }])
     );
 
-    // Build team → members map
     const teamMembersMap = new Map<string, MemberInfo[]>();
     const assignedUserIds = new Set<string>();
 
@@ -124,22 +134,38 @@ export function TeamManagement() {
       created_at: t.created_at,
       members: teamMembersMap.get(t.id) || [],
     }));
-    setTeams(teamRows);
 
-    // Unassigned: non-director users without any team membership
-    const unassignedUsers: UnassignedUser[] = (profiles || [])
-      .filter((p: any) => {
-        const r = roleMap.get(p.user_id);
-        return r !== "diretor" && !assignedUserIds.has(p.user_id);
-      })
-      .map((p: any) => ({
-        user_id: p.user_id,
-        full_name: p.full_name,
-        email: p.email,
-        role: roleMap.get(p.user_id) || null,
-      }));
-    setUnassigned(unassignedUsers);
-  }, [profile?.tenant_id]);
+    // For non-directors, filter to only their teams
+    if (role === "gestor") {
+      const myTeamIds = new Set(
+        (members || []).filter((m: any) => m.user_id === user?.id).map((m: any) => m.team_id)
+      );
+      setTeams(teamRows.filter((t) => myTeamIds.has(t.id)));
+    } else if (role === "vendedor") {
+      const myTeamIds = new Set(
+        (members || []).filter((m: any) => m.user_id === user?.id).map((m: any) => m.team_id)
+      );
+      setTeams(teamRows.filter((t) => myTeamIds.has(t.id)));
+    } else {
+      setTeams(teamRows);
+    }
+
+    // Unassigned: non-director users without any team membership (director only sees this)
+    if (isDirector) {
+      const unassignedUsers: UnassignedUser[] = (profiles || [])
+        .filter((p: any) => {
+          const r = roleMap.get(p.user_id);
+          return r !== "diretor" && !assignedUserIds.has(p.user_id);
+        })
+        .map((p: any) => ({
+          user_id: p.user_id,
+          full_name: p.full_name,
+          email: p.email,
+          role: roleMap.get(p.user_id) || null,
+        }));
+      setUnassigned(unassignedUsers);
+    }
+  }, [profile?.tenant_id, role, user?.id, isDirector]);
 
   useEffect(() => {
     fetchAll();
@@ -190,11 +216,38 @@ export function TeamManagement() {
     setLoading(false);
   };
 
+  // Delete team
+  const handleDeleteTeam = async (team: TeamRow) => {
+    setLoading(true);
+    // First remove all members
+    if (team.members.length > 0) {
+      const memberIds = team.members.map((m) => m.membership_id).filter(Boolean) as string[];
+      if (memberIds.length > 0) {
+        const { error: memError } = await supabase
+          .from("team_members")
+          .delete()
+          .in("id", memberIds);
+        if (memError) {
+          toast({ title: "Erro ao remover membros", description: memError.message, variant: "destructive" });
+          setLoading(false);
+          return;
+        }
+      }
+    }
+    const { error } = await supabase.from("teams").delete().eq("id", team.id);
+    if (error) {
+      toast({ title: "Erro ao excluir time", description: error.message, variant: "destructive" });
+    } else {
+      toast({ title: "Time excluído" });
+      fetchAll();
+    }
+    setLoading(false);
+  };
+
   // Assign user to team
   const openAssign = (teamId: string) => {
     setAssignTeamId(teamId);
     setAssignUserId("");
-    // Assignable = unassigned users (sellers/managers not in any team)
     setAssignableUsers(unassigned);
     setAssignOpen(true);
   };
@@ -265,10 +318,54 @@ export function TeamManagement() {
     }
   };
 
+  // Read-only view for non-directors
   if (!isDirector) {
-    return null;
+    if (teams.length === 0) return null;
+
+    return (
+      <div className="space-y-4">
+        <div>
+          <h3 className="text-lg font-semibold">Meu Time</h3>
+          <p className="text-sm text-muted-foreground">Membros do seu time de vendas.</p>
+        </div>
+        {teams.map((team) => (
+          <div key={team.id} className="rounded-lg border p-4 space-y-3">
+            <div className="flex items-center gap-2">
+              <Users className="h-4 w-4 text-muted-foreground" />
+              <span className="font-medium">{team.name}</span>
+              <Badge variant="secondary">
+                {team.members.length} membro{team.members.length !== 1 ? "s" : ""}
+              </Badge>
+            </div>
+            {team.members.length > 0 && (
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Nome</TableHead>
+                    <TableHead>E-mail</TableHead>
+                    <TableHead>Cargo</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {team.members.map((m) => (
+                    <TableRow key={m.user_id}>
+                      <TableCell className="font-medium">{m.full_name}</TableCell>
+                      <TableCell className="text-sm">{m.email}</TableCell>
+                      <TableCell>
+                        <Badge variant="secondary">{roleLabel(m.role)}</Badge>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            )}
+          </div>
+        ))}
+      </div>
+    );
   }
 
+  // Director full management view
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -284,11 +381,11 @@ export function TeamManagement() {
 
       {/* Unassigned users alert */}
       {unassigned.length > 0 && (
-        <div className="rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm">
-          <p className="font-medium text-amber-800">
+        <div className="rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm dark:border-amber-800 dark:bg-amber-950/30">
+          <p className="font-medium text-amber-800 dark:text-amber-300">
             {unassigned.length} usuário(s) sem time atribuído:
           </p>
-          <p className="text-amber-700 mt-1">
+          <p className="text-amber-700 dark:text-amber-400 mt-1">
             {unassigned.map((u) => u.full_name).join(", ")}
           </p>
         </div>
@@ -320,6 +417,29 @@ export function TeamManagement() {
                     <Button variant="outline" size="sm" onClick={() => openAssign(team.id)}>
                       <UserPlus className="h-3.5 w-3.5 mr-1" /> Adicionar Membro
                     </Button>
+                    <AlertDialog>
+                      <AlertDialogTrigger asChild>
+                        <Button variant="outline" size="sm" className="text-destructive hover:text-destructive">
+                          <Trash2 className="h-3.5 w-3.5 mr-1" /> Excluir
+                        </Button>
+                      </AlertDialogTrigger>
+                      <AlertDialogContent>
+                        <AlertDialogHeader>
+                          <AlertDialogTitle>Excluir time "{team.name}"?</AlertDialogTitle>
+                          <AlertDialogDescription>
+                            {team.members.length > 0
+                              ? `Este time possui ${team.members.length} membro(s). Eles serão desvinculados e ficarão sem time atribuído.`
+                              : "Esta ação não pode ser desfeita."}
+                          </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                          <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                          <AlertDialogAction onClick={() => handleDeleteTeam(team)}>
+                            Confirmar Exclusão
+                          </AlertDialogAction>
+                        </AlertDialogFooter>
+                      </AlertDialogContent>
+                    </AlertDialog>
                   </div>
 
                   {team.members.length === 0 ? (
