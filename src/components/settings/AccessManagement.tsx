@@ -76,6 +76,7 @@ interface InvitationRow {
   status: string;
   token: string;
   created_at: string;
+  team_id: string | null;
   team_name: string | null;
 }
 
