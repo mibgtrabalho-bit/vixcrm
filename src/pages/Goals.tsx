@@ -141,33 +141,27 @@ export default function Goals() {
   const fetchData = async () => {
     setLoading(true);
 
-    const promises: Promise<any>[] = [
+    const [teamsRes, tmRes, profilesRes, oppsRes, sellerRes] = await Promise.all([
       supabase.from("teams").select("id, name"),
       supabase.from("team_members").select("team_id, user_id"),
       supabase.from("profiles").select("user_id, full_name"),
       supabase.from("opportunities").select("assigned_to, value_implantacao, value_saas, stage, first_closed_at, updated_at").eq("stage", "fechado"),
       supabase.from("monthly_targets").select("id, user_id, month, target_value, target_saas, target_setup").eq("month", monthStr),
-    ];
+    ]);
 
-    // Only director/manager can see team_targets and user_roles
+    setTeams(teamsRes.data || []);
+    setTeamMembers(tmRes.data || []);
+    setProfiles(profilesRes.data || []);
+    setOpportunities(oppsRes.data || []);
+    setSellerTargets(sellerRes.data || []);
+
     if (!isSeller) {
-      promises.push(
+      const [ttRes, rolesRes] = await Promise.all([
         supabase.from("team_targets" as any).select("id, team_id, month, target_saas, target_setup").eq("month", monthStr),
-        supabase.from("user_roles").select("user_id, role")
-      );
-    }
-
-    const results = await Promise.all(promises);
-
-    setTeams(results[0].data || []);
-    setTeamMembers(results[1].data || []);
-    setProfiles(results[2].data || []);
-    setOpportunities(results[3].data || []);
-    setSellerTargets(results[4].data || []);
-
-    if (!isSeller) {
-      setTeamTargets(results[5]?.data || []);
-      setUserRoles(results[6]?.data || []);
+        supabase.from("user_roles").select("user_id, role"),
+      ]);
+      setTeamTargets(ttRes.data || []);
+      setUserRoles(rolesRes.data || []);
     }
 
     setLoading(false);
