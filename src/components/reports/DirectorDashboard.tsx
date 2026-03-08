@@ -363,17 +363,15 @@ export function DirectorDashboard({ filters }: DirectorDashboardProps) {
                        <TableCell className="text-sm font-medium">{s.name}</TableCell>
                        <TableCell className="text-sm text-right">{s.opps}</TableCell>
                        <TableCell className="text-sm text-right">
-                         <div className="font-medium">{formatCurrency(s.pipelineVal)}</div>
-                         <div className="text-xs text-muted-foreground">SaaS {formatCurrency(s.pipelineSaas)}</div>
-                         <div className="text-xs text-muted-foreground">Setup {formatCurrency(s.pipelineSetup)}</div>
-                       </TableCell>
-                       <TableCell className="text-sm text-right">
-                         <div className="font-medium">{formatCurrency(s.closedVal)}</div>
-                         <div className="text-xs text-muted-foreground">SaaS {formatCurrency(s.closedSaas)}</div>
-                         <div className="text-xs text-muted-foreground">Setup {formatCurrency(s.closedSetup)}</div>
-                       </TableCell>
-                       <TableCell className="text-sm text-right">{s.conversion.toFixed(1).replace(".", ",")}%</TableCell>
-                       <TableCell className="text-sm text-right">{formatCurrency(s.avgTicket)}</TableCell>
+                          <div className="text-xs text-muted-foreground">Setup {formatCurrency(s.pipelineSetup)}</div>
+                          <div className="text-xs text-muted-foreground">SaaS/mês {formatCurrency(s.pipelineSaas)}</div>
+                        </TableCell>
+                        <TableCell className="text-sm text-right">
+                          <div className="text-xs text-muted-foreground">Setup {formatCurrency(s.closedSetup)}</div>
+                          <div className="text-xs text-muted-foreground">SaaS/mês {formatCurrency(s.closedSaas)}</div>
+                        </TableCell>
+                        <TableCell className="text-sm text-right">{s.conversion.toFixed(1).replace(".", ",")}%</TableCell>
+                        <TableCell className="text-sm text-right">{formatCurrency(s.avgTicket)}</TableCell>
                      </TableRow>
                   ))}
                 </TableBody>
