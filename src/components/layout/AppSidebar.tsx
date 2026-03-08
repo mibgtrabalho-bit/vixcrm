@@ -25,26 +25,35 @@ interface NavItem {
   children?: { icon: React.ElementType; label: string; href: string }[];
 }
 
-const navItems: NavItem[] = [
+const baseNavItems: NavItem[] = [
   { icon: LayoutDashboard, label: "Dashboard", href: "/" },
   { icon: Kanban, label: "Pipeline", href: "/pipeline" },
   { icon: Users, label: "Contatos", href: "/contacts" },
   { icon: Building2, label: "Empresas", href: "/companies" },
-  {
-    icon: Eye,
-    label: "Visão Estratégica",
-    children: [
-      { icon: Target, label: "Metas", href: "/goals" },
-      { icon: BarChart3, label: "Relatórios", href: "/reports" },
-    ],
-  },
-  { icon: Settings, label: "Configurações", href: "/settings" },
 ];
+
+const strategicNav: NavItem = {
+  icon: Eye,
+  label: "Visão Estratégica",
+  children: [
+    { icon: Target, label: "Metas", href: "/goals" },
+    { icon: BarChart3, label: "Relatórios", href: "/reports" },
+  ],
+};
+
+const settingsNav: NavItem = { icon: Settings, label: "Configurações", href: "/settings" };
 
 export function AppSidebar() {
   const [collapsed, setCollapsed] = useState(false);
   const location = useLocation();
   const { profile, role, signOut } = useAuth();
+
+  const showStrategic = role === "gestor" || role === "diretor";
+  const navItems: NavItem[] = [
+    ...baseNavItems,
+    ...(showStrategic ? [strategicNav] : []),
+    settingsNav,
+  ];
 
   const isStrategicActive = ["/goals", "/reports"].includes(location.pathname);
   const [strategicOpen, setStrategicOpen] = useState(isStrategicActive);
