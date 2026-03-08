@@ -241,6 +241,7 @@ export type Database = {
           first_closed_at: string | null
           first_payment_date: string | null
           id: string
+          last_activity_at: string | null
           notes: string | null
           stage: Database["public"]["Enums"]["pipeline_stage"]
           tenant_id: string
@@ -262,6 +263,7 @@ export type Database = {
           first_closed_at?: string | null
           first_payment_date?: string | null
           id?: string
+          last_activity_at?: string | null
           notes?: string | null
           stage?: Database["public"]["Enums"]["pipeline_stage"]
           tenant_id: string
@@ -283,6 +285,7 @@ export type Database = {
           first_closed_at?: string | null
           first_payment_date?: string | null
           id?: string
+          last_activity_at?: string | null
           notes?: string | null
           stage?: Database["public"]["Enums"]["pipeline_stage"]
           tenant_id?: string
