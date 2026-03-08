@@ -124,6 +124,104 @@ export type Database = {
           },
         ]
       }
+      funnel_stages: {
+        Row: {
+          created_at: string
+          display_order: number
+          funnel_id: string
+          id: string
+          is_active: boolean
+          is_lost_stage: boolean
+          is_won_stage: boolean
+          key: string
+          name: string
+          tenant_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          display_order?: number
+          funnel_id: string
+          id?: string
+          is_active?: boolean
+          is_lost_stage?: boolean
+          is_won_stage?: boolean
+          key: string
+          name: string
+          tenant_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          display_order?: number
+          funnel_id?: string
+          id?: string
+          is_active?: boolean
+          is_lost_stage?: boolean
+          is_won_stage?: boolean
+          key?: string
+          name?: string
+          tenant_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "funnel_stages_funnel_id_fkey"
+            columns: ["funnel_id"]
+            isOneToOne: false
+            referencedRelation: "funnels"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "funnel_stages_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      funnels: {
+        Row: {
+          created_at: string
+          display_order: number
+          id: string
+          is_active: boolean
+          is_default: boolean
+          name: string
+          tenant_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          display_order?: number
+          id?: string
+          is_active?: boolean
+          is_default?: boolean
+          name: string
+          tenant_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          display_order?: number
+          id?: string
+          is_active?: boolean
+          is_default?: boolean
+          name?: string
+          tenant_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "funnels_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       invitations: {
         Row: {
           created_at: string
@@ -240,6 +338,8 @@ export type Database = {
           expected_close_date: string | null
           first_closed_at: string | null
           first_payment_date: string | null
+          funnel_id: string | null
+          funnel_stage_id: string | null
           id: string
           last_activity_at: string | null
           notes: string | null
@@ -262,6 +362,8 @@ export type Database = {
           expected_close_date?: string | null
           first_closed_at?: string | null
           first_payment_date?: string | null
+          funnel_id?: string | null
+          funnel_stage_id?: string | null
           id?: string
           last_activity_at?: string | null
           notes?: string | null
@@ -284,6 +386,8 @@ export type Database = {
           expected_close_date?: string | null
           first_closed_at?: string | null
           first_payment_date?: string | null
+          funnel_id?: string | null
+          funnel_stage_id?: string | null
           id?: string
           last_activity_at?: string | null
           notes?: string | null
@@ -308,6 +412,20 @@ export type Database = {
             columns: ["contact_id"]
             isOneToOne: false
             referencedRelation: "contacts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "opportunities_funnel_id_fkey"
+            columns: ["funnel_id"]
+            isOneToOne: false
+            referencedRelation: "funnels"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "opportunities_funnel_stage_id_fkey"
+            columns: ["funnel_stage_id"]
+            isOneToOne: false
+            referencedRelation: "funnel_stages"
             referencedColumns: ["id"]
           },
           {
