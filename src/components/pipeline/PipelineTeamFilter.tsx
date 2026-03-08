@@ -1,88 +1,226 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { Users } from "lucide-react";
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import { Button } from "@/components/ui/button";
+import { Users, ChevronDown, Check, User } from "lucide-react";
+import { cn } from "@/lib/utils";
 
-interface Team {
+interface TeamWithMembers {
   id: string;
   name: string;
+  members: { user_id: string; full_name: string }[];
+}
+
+// Filter value format:
+// "all"          → all opportunities (director only)
+// "team:<id>"    → all opportunities for a team
+// "user:<id>"    → opportunities for a specific user
+export interface PipelineFilterValue {
+  raw: string;
+  type: "all" | "team" | "user";
+  id?: string;
+}
+
+export function parsePipelineFilter(value: string): PipelineFilterValue {
+  if (value === "all") return { raw: value, type: "all" };
+  if (value.startsWith("team:")) return { raw: value, type: "team", id: value.slice(5) };
+  if (value.startsWith("user:")) return { raw: value, type: "user", id: value.slice(5) };
+  // Legacy: bare UUID = team
+  return { raw: value, type: "team", id: value };
 }
 
 interface PipelineTeamFilterProps {
-  value: string; // "all" or team id
+  value: string;
   onChange: (value: string) => void;
 }
 
 export function PipelineTeamFilter({ value, onChange }: PipelineTeamFilterProps) {
-  const [teams, setTeams] = useState<Team[]>([]);
+  const [teamsWithMembers, setTeamsWithMembers] = useState<TeamWithMembers[]>([]);
   const [loading, setLoading] = useState(true);
+  const [open, setOpen] = useState(false);
   const { role, user } = useAuth();
 
   useEffect(() => {
-    fetchTeams();
+    if (user?.id && role) fetchData();
   }, [role, user?.id]);
 
-  const fetchTeams = async () => {
+  const fetchData = async () => {
     if (!user?.id) return;
 
+    let teamIds: string[] = [];
+
     if (role === "diretor") {
-      // Director sees all teams
-      const { data } = await supabase
+      const { data: teams } = await supabase
         .from("teams")
         .select("id, name")
         .order("name");
-      setTeams(data || []);
+
+      teamIds = (teams || []).map((t) => t.id);
+
+      // Fetch all members with profiles for each team
+      const { data: members } = await supabase
+        .from("team_members")
+        .select("team_id, user_id, profiles:user_id(full_name)")
+        .in("team_id", teamIds);
+
+      const teamsMap: TeamWithMembers[] = (teams || []).map((t) => ({
+        id: t.id,
+        name: t.name,
+        members: (members || [])
+          .filter((m: any) => m.team_id === t.id)
+          .map((m: any) => ({
+            user_id: m.user_id,
+            full_name: (m.profiles as any)?.full_name || "Sem nome",
+          }))
+          .sort((a: any, b: any) => a.full_name.localeCompare(b.full_name)),
+      }));
+
+      setTeamsWithMembers(teamsMap);
     } else if (role === "gestor") {
-      // Manager sees only their teams
-      const { data } = await supabase
+      // Manager: only their teams
+      const { data: myTeams } = await supabase
         .from("team_members")
         .select("team_id, teams(id, name)")
         .eq("user_id", user.id);
 
-      const managerTeams: Team[] = (data || [])
-        .map((tm: any) => tm.teams)
-        .filter(Boolean);
-      setTeams(managerTeams);
+      const teams = (myTeams || []).map((t: any) => t.teams).filter(Boolean);
+      teamIds = teams.map((t: any) => t.id);
 
-      // Auto-select if only one team
-      if (managerTeams.length === 1) {
-        onChange(managerTeams[0].id);
+      const { data: members } = await supabase
+        .from("team_members")
+        .select("team_id, user_id, profiles:user_id(full_name)")
+        .in("team_id", teamIds);
+
+      const teamsMap: TeamWithMembers[] = teams.map((t: any) => ({
+        id: t.id,
+        name: t.name,
+        members: (members || [])
+          .filter((m: any) => m.team_id === t.id)
+          .map((m: any) => ({
+            user_id: m.user_id,
+            full_name: (m.profiles as any)?.full_name || "Sem nome",
+          }))
+          .sort((a: any, b: any) => a.full_name.localeCompare(b.full_name)),
+      }));
+
+      setTeamsWithMembers(teamsMap);
+
+      // Auto-select single team
+      if (teamsMap.length === 1 && value === "all") {
+        onChange(`team:${teamsMap[0].id}`);
       }
     }
+
     setLoading(false);
   };
 
-  // Seller: no filter shown
+  // Compute display label
+  const displayLabel = useMemo(() => {
+    const parsed = parsePipelineFilter(value);
+    if (parsed.type === "all") return "Todos os times";
+    if (parsed.type === "team") {
+      const team = teamsWithMembers.find((t) => t.id === parsed.id);
+      return team?.name || "Time";
+    }
+    if (parsed.type === "user") {
+      for (const team of teamsWithMembers) {
+        const member = team.members.find((m) => m.user_id === parsed.id);
+        if (member) return member.full_name;
+      }
+      return "Usuário";
+    }
+    return "Filtrar";
+  }, [value, teamsWithMembers]);
+
+  // Seller: no filter
   if (role === "vendedor") return null;
 
-  // Manager with single team: no selector needed (auto-filtered)
-  if (role === "gestor" && teams.length <= 1) return null;
+  // Manager with single team and single member (themselves): hide
+  if (role === "gestor" && teamsWithMembers.length === 1 && teamsWithMembers[0].members.length <= 1) return null;
 
   if (loading) return null;
 
+  const handleSelect = (newValue: string) => {
+    onChange(newValue);
+    setOpen(false);
+  };
+
+  const parsed = parsePipelineFilter(value);
+
   return (
-    <Select value={value} onValueChange={onChange}>
-      <SelectTrigger className="w-[180px] h-9 text-sm">
-        <Users className="h-4 w-4 mr-2 text-muted-foreground" />
-        <SelectValue placeholder="Filtrar por time" />
-      </SelectTrigger>
-      <SelectContent>
-        {role === "diretor" && (
-          <SelectItem value="all">Todos os times</SelectItem>
-        )}
-        {teams.map((team) => (
-          <SelectItem key={team.id} value={team.id}>
-            {team.name}
-          </SelectItem>
-        ))}
-      </SelectContent>
-    </Select>
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <Button
+          variant="outline"
+          size="sm"
+          className="h-9 gap-2 text-sm font-normal"
+        >
+          <Users className="h-4 w-4 text-muted-foreground" />
+          <span className="max-w-[160px] truncate">{displayLabel}</span>
+          <ChevronDown className="h-3 w-3 text-muted-foreground" />
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent className="w-[240px] p-1" align="start">
+        <div className="max-h-[320px] overflow-y-auto">
+          {/* All teams option (director only) */}
+          {role === "diretor" && (
+            <button
+              onClick={() => handleSelect("all")}
+              className={cn(
+                "flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-sm hover:bg-accent",
+                parsed.type === "all" && "bg-accent"
+              )}
+            >
+              <Users className="h-3.5 w-3.5 text-muted-foreground" />
+              <span className="flex-1 text-left">Todos os times</span>
+              {parsed.type === "all" && <Check className="h-3.5 w-3.5 text-primary" />}
+            </button>
+          )}
+
+          {/* Teams with members */}
+          {teamsWithMembers.map((team) => (
+            <div key={team.id} className="mt-1">
+              {/* Team header (clickable = select whole team) */}
+              <button
+                onClick={() => handleSelect(`team:${team.id}`)}
+                className={cn(
+                  "flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-sm font-medium hover:bg-accent",
+                  parsed.type === "team" && parsed.id === team.id && "bg-accent"
+                )}
+              >
+                <Users className="h-3.5 w-3.5 text-muted-foreground" />
+                <span className="flex-1 text-left">{team.name}</span>
+                {parsed.type === "team" && parsed.id === team.id && (
+                  <Check className="h-3.5 w-3.5 text-primary" />
+                )}
+              </button>
+
+              {/* Team members */}
+              {team.members.map((member) => (
+                <button
+                  key={member.user_id}
+                  onClick={() => handleSelect(`user:${member.user_id}`)}
+                  className={cn(
+                    "flex w-full items-center gap-2 rounded-md px-2 py-1.5 pl-7 text-sm hover:bg-accent",
+                    parsed.type === "user" && parsed.id === member.user_id && "bg-accent"
+                  )}
+                >
+                  <User className="h-3 w-3 text-muted-foreground" />
+                  <span className="flex-1 text-left">{member.full_name}</span>
+                  {parsed.type === "user" && parsed.id === member.user_id && (
+                    <Check className="h-3.5 w-3.5 text-primary" />
+                  )}
+                </button>
+              ))}
+            </div>
+          ))}
+        </div>
+      </PopoverContent>
+    </Popover>
   );
 }

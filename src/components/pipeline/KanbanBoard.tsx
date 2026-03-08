@@ -56,17 +56,27 @@ export function KanbanBoard({ teamFilter = "all" }: KanbanBoardProps) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
-  // Fetch team member IDs when teamFilter changes
+  // Resolve filter to assigned_to user IDs
   useEffect(() => {
     if (teamFilter === "all") {
       setTeamMemberIds(null);
       return;
     }
+
+    // Individual user filter: "user:<userId>"
+    if (teamFilter.startsWith("user:")) {
+      const userId = teamFilter.slice(5);
+      setTeamMemberIds([userId]);
+      return;
+    }
+
+    // Team filter: "team:<teamId>" or bare teamId (legacy)
+    const teamId = teamFilter.startsWith("team:") ? teamFilter.slice(5) : teamFilter;
     const fetchTeamMembers = async () => {
       const { data } = await supabase
         .from("team_members")
         .select("user_id")
-        .eq("team_id", teamFilter);
+        .eq("team_id", teamId);
       setTeamMemberIds((data || []).map((m) => m.user_id));
     };
     fetchTeamMembers();
