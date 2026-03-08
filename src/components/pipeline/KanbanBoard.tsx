@@ -92,9 +92,7 @@ export function KanbanBoard({ teamFilter = "all" }: KanbanBoardProps) {
       .select(`
         id, title, value, value_implantacao, value_saas, stage, expected_close_date, notes, assigned_to, contact_id, company_id, first_payment_date,
         contacts:contact_id(name),
-        companies:company_id(name),
-        profiles:assigned_to(full_name),
-        team_members:assigned_to(team_id, teams:team_id(name))
+        companies:company_id(name)
       `)
       .order("created_at", { ascending: true });
 
@@ -116,30 +114,44 @@ export function KanbanBoard({ teamFilter = "all" }: KanbanBoardProps) {
       return;
     }
 
-    const mapped: Opportunity[] = (data || []).map((o: any) => {
-      // team_members is an array since user can be in multiple teams; take first
-      const teamArr = Array.isArray(o.team_members) ? o.team_members : o.team_members ? [o.team_members] : [];
-      const teamName = teamArr[0]?.teams?.name || null;
+    // Collect unique assigned_to IDs to fetch names + teams in bulk
+    const assignedIds = [...new Set((data || []).map((o: any) => o.assigned_to).filter(Boolean))];
 
-      return {
-        id: o.id,
-        title: o.title,
-        value: o.value,
-        value_implantacao: o.value_implantacao,
-        value_saas: o.value_saas,
-        stage: o.stage,
-        company_name: o.companies?.name,
-        contact_name: o.contacts?.name,
-        assigned_to_name: o.profiles?.full_name || null,
-        team_name: teamName,
-        expected_close_date: o.expected_close_date,
-        notes: o.notes,
-        contact_id: o.contact_id,
-        company_id: o.company_id,
-        assigned_to: o.assigned_to,
-        first_payment_date: o.first_payment_date,
-      };
-    });
+    let profileMap = new Map<string, string>();
+    let teamNameMap = new Map<string, string>();
+
+    if (assignedIds.length > 0) {
+      const [{ data: profiles }, { data: tmData }] = await Promise.all([
+        supabase.from("profiles").select("user_id, full_name").in("user_id", assignedIds),
+        supabase.from("team_members").select("user_id, teams:team_id(name)").in("user_id", assignedIds),
+      ]);
+
+      (profiles || []).forEach((p: any) => profileMap.set(p.user_id, p.full_name));
+      (tmData || []).forEach((tm: any) => {
+        if (!teamNameMap.has(tm.user_id) && tm.teams?.name) {
+          teamNameMap.set(tm.user_id, tm.teams.name);
+        }
+      });
+    }
+
+    const mapped: Opportunity[] = (data || []).map((o: any) => ({
+      id: o.id,
+      title: o.title,
+      value: o.value,
+      value_implantacao: o.value_implantacao,
+      value_saas: o.value_saas,
+      stage: o.stage,
+      company_name: o.companies?.name,
+      contact_name: o.contacts?.name,
+      assigned_to_name: profileMap.get(o.assigned_to) || null,
+      team_name: teamNameMap.get(o.assigned_to) || null,
+      expected_close_date: o.expected_close_date,
+      notes: o.notes,
+      contact_id: o.contact_id,
+      company_id: o.company_id,
+      assigned_to: o.assigned_to,
+      first_payment_date: o.first_payment_date,
+    }));
 
     setOpportunities(mapped);
     setLoading(false);
