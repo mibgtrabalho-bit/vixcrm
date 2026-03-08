@@ -86,11 +86,21 @@ export function ExportCsvDialog({ open, onOpenChange, currentFilter }: ExportCsv
   const [loading, setLoading] = useState(false);
   const [exporting, setExporting] = useState(false);
 
+  // Seller: auto-export once when dialog opens
   useEffect(() => {
+    if (open && role === "vendedor" && !exporting) {
+      handleSellerExport();
+    }
     if (open && role !== "vendedor") {
       loadTeams();
     }
   }, [open, role]);
+
+  const handleSellerExport = async () => {
+    setExporting(true);
+    await handleExport(false);
+    onOpenChange(false);
+  };
 
   const loadTeams = async () => {
     if (!user?.id) return;
@@ -317,14 +327,8 @@ export function ExportCsvDialog({ open, onOpenChange, currentFilter }: ExportCsv
     }
   };
 
-  // Seller: direct export
-  if (role === "vendedor") {
-    if (open) {
-      handleExport(false);
-      onOpenChange(false);
-    }
-    return null;
-  }
+  // Seller: no dialog, handled by useEffect
+  if (role === "vendedor") return null;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
