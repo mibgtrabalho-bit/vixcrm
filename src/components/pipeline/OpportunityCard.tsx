@@ -74,25 +74,34 @@ export function OpportunityCard({ opportunity, index, onClick }: Props) {
             </div>
           ) : null}
 
-          <div className="mt-2.5 flex items-center justify-between">
-            {opportunity.assigned_to_name && (
-              <div className="flex items-center gap-1 text-[11px] text-muted-foreground">
-                <User className="h-3 w-3" />
-                <span className="truncate max-w-[80px]">{opportunity.assigned_to_name}</span>
-              </div>
-            )}
-            {opportunity.expected_close_date && (
-              <div className="flex items-center gap-1 text-[11px] text-muted-foreground">
-                <Calendar className="h-3 w-3" />
-                <span>
-                  {new Date(opportunity.expected_close_date).toLocaleDateString("pt-BR", {
-                    day: "2-digit",
-                    month: "short",
-                  })}
-                </span>
-              </div>
-            )}
-          </div>
+          {(opportunity.assigned_to_name || opportunity.team_name) && (
+            <div className="mt-2 flex items-center gap-2.5 text-[11px] text-muted-foreground">
+              {opportunity.assigned_to_name && (
+                <div className="flex items-center gap-1 min-w-0">
+                  <User className="h-3 w-3 shrink-0" />
+                  <span className="truncate max-w-[90px]">{opportunity.assigned_to_name}</span>
+                </div>
+              )}
+              {opportunity.team_name && (
+                <div className="flex items-center gap-1 min-w-0">
+                  <Users className="h-3 w-3 shrink-0" />
+                  <span className="truncate max-w-[80px]">{opportunity.team_name}</span>
+                </div>
+              )}
+            </div>
+          )}
+
+          {opportunity.expected_close_date && (
+            <div className="mt-1.5 flex items-center gap-1 text-[11px] text-muted-foreground">
+              <Calendar className="h-3 w-3" />
+              <span>
+                {new Date(opportunity.expected_close_date).toLocaleDateString("pt-BR", {
+                  day: "2-digit",
+                  month: "short",
+                })}
+              </span>
+            </div>
+          )}
         </div>
       )}
     </Draggable>
