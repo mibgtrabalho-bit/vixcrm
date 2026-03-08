@@ -322,6 +322,56 @@ export function AccessManagement() {
     }
   };
 
+  const [deleteLoading, setDeleteLoading] = useState(false);
+
+  const deleteUserAccess = async (targetUserId: string, userName: string) => {
+    setDeleteLoading(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("delete-user-access", {
+        body: { target_user_id: targetUserId },
+      });
+      if (error || data?.error) {
+        toast({ title: "Erro ao excluir", description: data?.error || error?.message, variant: "destructive" });
+      } else {
+        let desc = `Acesso de ${userName} foi removido.`;
+        if (data?.reassignment?.reassigned) {
+          desc += ` ${data.reassignment.opportunities} oportunidade(s) e ${data.reassignment.contacts} contato(s) foram reatribuídos.`;
+        } else if (data?.reassignment?.unassigned) {
+          desc += ` ${data.reassignment.opportunities} oportunidade(s) ficaram sem responsável (requer revisão do diretor).`;
+        }
+        toast({ title: "Acesso excluído", description: desc });
+        fetchAll();
+      }
+    } catch (e: any) {
+      toast({ title: "Erro", description: e.message, variant: "destructive" });
+    }
+    setDeleteLoading(false);
+  };
+
+  const deleteInvite = async (inviteId: string, email: string) => {
+    setDeleteLoading(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("delete-user-access", {
+        body: { target_invite_id: inviteId },
+      });
+      if (error || data?.error) {
+        toast({ title: "Erro ao excluir convite", description: data?.error || error?.message, variant: "destructive" });
+      } else {
+        toast({ title: "Convite excluído", description: `Convite para ${email} foi removido.` });
+        fetchAll();
+      }
+    } catch (e: any) {
+      toast({ title: "Erro", description: e.message, variant: "destructive" });
+    }
+    setDeleteLoading(false);
+  };
+
+  const canDeleteUser = (targetRole: string | null) => {
+    if (isDirector) return true;
+    if (isManager && targetRole === "vendedor") return true;
+    return false;
+  };
+
   const roleLabel = (r: string | null) => {
     switch (r) {
       case "vendedor": return "Vendedor";
