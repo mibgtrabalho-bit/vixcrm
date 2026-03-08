@@ -7,7 +7,6 @@ import { PipelineSummaryBar } from "@/components/pipeline/PipelineSummaryBar";
 import { CreateOpportunityDialog } from "@/components/pipeline/CreateOpportunityDialog";
 import { PipelineTeamFilter } from "@/components/pipeline/PipelineTeamFilter";
 import { ExportCsvDialog } from "@/components/pipeline/ExportCsvDialog";
-import { ExportCsvDialog } from "@/components/pipeline/ExportCsvDialog";
 import { Button } from "@/components/ui/button";
 import { Plus, LayoutGrid, List, Download } from "lucide-react";
 
