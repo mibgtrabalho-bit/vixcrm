@@ -2,6 +2,7 @@ import { useState, useCallback } from "react";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { KanbanBoard } from "@/components/pipeline/KanbanBoard";
+import { PipelineListView } from "@/components/pipeline/PipelineListView";
 import { CreateOpportunityDialog } from "@/components/pipeline/CreateOpportunityDialog";
 import { PipelineTeamFilter } from "@/components/pipeline/PipelineTeamFilter";
 import { ExportCsvDialog } from "@/components/pipeline/ExportCsvDialog";
@@ -51,7 +52,11 @@ export default function Pipeline() {
         </Button>
       </PageHeader>
 
-      <KanbanBoard key={refreshKey} teamFilter={teamFilter} />
+      {viewMode === "kanban" ? (
+        <KanbanBoard key={refreshKey} teamFilter={teamFilter} />
+      ) : (
+        <PipelineListView key={refreshKey} teamFilter={teamFilter} />
+      )}
 
       <CreateOpportunityDialog
         open={createOpen}
