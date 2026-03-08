@@ -177,8 +177,8 @@ export function PipelineTeamFilter({ value, onChange, sellersOnly = false }: Pip
   // Seller: no filter
   if (role === "vendedor") return null;
 
-  // Manager with single team and single member (themselves): hide
-  if (role === "gestor" && teamsWithMembers.length === 1 && teamsWithMembers[0].members.length <= 1) return null;
+  // Manager with single team and no selectable members: hide
+  if (role === "gestor" && teamsWithMembers.length === 1 && teamsWithMembers[0].members.length === 0) return null;
 
   if (loading) return null;
 
