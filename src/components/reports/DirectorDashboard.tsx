@@ -288,7 +288,7 @@ export function DirectorDashboard({ filters }: DirectorDashboardProps) {
                 <p className="text-xs text-muted-foreground truncate">{s.label}</p>
                 <p className="text-lg font-bold mt-1">{stageMap[s.id]?.count ?? 0}</p>
                 <p className="text-xs text-muted-foreground">Setup {formatCurrency(stageMap[s.id]?.setup ?? 0)}</p>
-                <p className="text-xs text-muted-foreground">SaaS/mês {formatCurrency(stageMap[s.id]?.saas ?? 0)}</p>
+                <p className="text-xs text-muted-foreground">SaaS {formatCurrency(stageMap[s.id]?.saas ?? 0)}</p>
               </div>
             ))}
           </div>
@@ -364,11 +364,11 @@ export function DirectorDashboard({ filters }: DirectorDashboardProps) {
                        <TableCell className="text-sm text-right">{s.opps}</TableCell>
                        <TableCell className="text-sm text-right">
                           <div className="text-xs text-muted-foreground">Setup {formatCurrency(s.pipelineSetup)}</div>
-                          <div className="text-xs text-muted-foreground">SaaS/mês {formatCurrency(s.pipelineSaas)}</div>
+                          <div className="text-xs text-muted-foreground">SaaS {formatCurrency(s.pipelineSaas)}</div>
                         </TableCell>
                         <TableCell className="text-sm text-right">
                           <div className="text-xs text-muted-foreground">Setup {formatCurrency(s.closedSetup)}</div>
-                          <div className="text-xs text-muted-foreground">SaaS/mês {formatCurrency(s.closedSaas)}</div>
+                          <div className="text-xs text-muted-foreground">SaaS {formatCurrency(s.closedSaas)}</div>
                         </TableCell>
                         <TableCell className="text-sm text-right">{s.conversion.toFixed(1).replace(".", ",")}%</TableCell>
                         <TableCell className="text-sm text-right">{formatCurrency(s.avgTicket)}</TableCell>
