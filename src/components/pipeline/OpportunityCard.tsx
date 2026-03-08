@@ -104,6 +104,26 @@ export function OpportunityCard({ opportunity, index, onClick }: Props) {
               </span>
             </div>
           )}
+
+          {opportunity.created_at && (
+            <div className="mt-1.5 flex items-center gap-1 text-[11px] text-muted-foreground/70">
+              <Clock className="h-3 w-3" />
+              <span>
+                Criado em{" "}
+                {new Date(opportunity.created_at).toLocaleDateString("pt-BR", {
+                  day: "2-digit",
+                  month: "2-digit",
+                  year: "2-digit",
+                  timeZone: "America/Sao_Paulo",
+                })}{" "}
+                {new Date(opportunity.created_at).toLocaleTimeString("pt-BR", {
+                  hour: "2-digit",
+                  minute: "2-digit",
+                  timeZone: "America/Sao_Paulo",
+                })}
+              </span>
+            </div>
+          )}
         </div>
       )}
     </Draggable>
