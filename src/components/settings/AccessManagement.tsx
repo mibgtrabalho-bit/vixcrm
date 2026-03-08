@@ -268,7 +268,35 @@ export function AccessManagement() {
   };
 
   const resendInvite = async (inv: InvitationRow) => {
-    copyLink(inv.token);
+    if (!user || !profile) return;
+    setInviteLoading(true);
+    // Revoke old invite and create a fresh one
+    await supabase
+      .from("invitations")
+      .update({ status: "revoked", revoked_at: new Date().toISOString(), revoked_by: user.id } as any)
+      .eq("id", inv.id);
+
+    const { data, error } = await supabase
+      .from("invitations")
+      .insert({
+        tenant_id: profile.tenant_id,
+        email: inv.email,
+        role: inv.role as any,
+        team_id: (inv as any).team_id || null,
+        invited_by: user.id,
+      })
+      .select("token")
+      .single();
+
+    if (error) {
+      toast({ title: "Erro ao reenviar", description: error.message, variant: "destructive" });
+    } else if (data) {
+      const link = `${window.location.origin}/auth?invite=${data.token}`;
+      navigator.clipboard.writeText(link);
+      toast({ title: "Novo convite gerado e link copiado!" });
+      fetchAll();
+    }
+    setInviteLoading(false);
   };
 
   const toggleUserActive = async (targetUserId: string, currentlyActive: boolean) => {
