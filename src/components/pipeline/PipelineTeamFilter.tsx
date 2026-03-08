@@ -37,9 +37,11 @@ export function parsePipelineFilter(value: string): PipelineFilterValue {
 interface PipelineTeamFilterProps {
   value: string;
   onChange: (value: string) => void;
+  /** When true, only vendedor-role users appear as individual selectable entries */
+  sellersOnly?: boolean;
 }
 
-export function PipelineTeamFilter({ value, onChange }: PipelineTeamFilterProps) {
+export function PipelineTeamFilter({ value, onChange, sellersOnly = false }: PipelineTeamFilterProps) {
   const [teamsWithMembers, setTeamsWithMembers] = useState<TeamWithMembers[]>([]);
   const [loading, setLoading] = useState(true);
   const [open, setOpen] = useState(false);
@@ -47,7 +49,7 @@ export function PipelineTeamFilter({ value, onChange }: PipelineTeamFilterProps)
 
   useEffect(() => {
     if (user?.id && role) fetchData();
-  }, [role, user?.id]);
+  }, [role, user?.id, sellersOnly]);
 
   const fetchData = async () => {
     if (!user?.id) return;
@@ -74,13 +76,23 @@ export function PipelineTeamFilter({ value, onChange }: PipelineTeamFilterProps)
         ? await supabase.from("profiles").select("user_id, full_name").in("user_id", memberUserIds).eq("is_active", true)
         : { data: [] };
 
+      // When sellersOnly, fetch roles to filter out non-vendedores from individual entries
+      let sellerSet: Set<string> | null = null;
+      if (sellersOnly && memberUserIds.length > 0) {
+        const { data: roles } = await supabase
+          .from("user_roles")
+          .select("user_id, role")
+          .in("user_id", memberUserIds);
+        sellerSet = new Set((roles || []).filter((r: any) => r.role === "vendedor").map((r: any) => r.user_id));
+      }
+
       const profileMap = new Map((profiles || []).map((p: any) => [p.user_id, p.full_name]));
 
       const teamsMap: TeamWithMembers[] = (teams || []).map((t) => ({
         id: t.id,
         name: t.name,
         members: (members || [])
-          .filter((m: any) => m.team_id === t.id && profileMap.has(m.user_id))
+          .filter((m: any) => m.team_id === t.id && profileMap.has(m.user_id) && (!sellerSet || sellerSet.has(m.user_id)))
           .map((m: any) => ({
             user_id: m.user_id,
             full_name: profileMap.get(m.user_id) || "Sem nome",
@@ -110,13 +122,22 @@ export function PipelineTeamFilter({ value, onChange }: PipelineTeamFilterProps)
         ? await supabase.from("profiles").select("user_id, full_name").in("user_id", memberUserIds).eq("is_active", true)
         : { data: [] };
 
+      let sellerSet: Set<string> | null = null;
+      if (sellersOnly && memberUserIds.length > 0) {
+        const { data: roles } = await supabase
+          .from("user_roles")
+          .select("user_id, role")
+          .in("user_id", memberUserIds);
+        sellerSet = new Set((roles || []).filter((r: any) => r.role === "vendedor").map((r: any) => r.user_id));
+      }
+
       const profileMap = new Map((profiles || []).map((p: any) => [p.user_id, p.full_name]));
 
       const teamsMap: TeamWithMembers[] = teams.map((t: any) => ({
         id: t.id,
         name: t.name,
         members: (members || [])
-          .filter((m: any) => m.team_id === t.id && profileMap.has(m.user_id))
+          .filter((m: any) => m.team_id === t.id && profileMap.has(m.user_id) && (!sellerSet || sellerSet.has(m.user_id)))
           .map((m: any) => ({
             user_id: m.user_id,
             full_name: profileMap.get(m.user_id) || "Sem nome",

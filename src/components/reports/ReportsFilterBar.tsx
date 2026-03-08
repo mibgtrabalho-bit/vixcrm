@@ -45,7 +45,7 @@ export function ReportsFilterBar({
 
       {/* Team/user filter — hidden for sellers */}
       {role !== "vendedor" && (
-        <PipelineTeamFilter value={teamFilter} onChange={onTeamFilterChange} />
+        <PipelineTeamFilter value={teamFilter} onChange={onTeamFilterChange} sellersOnly />
       )}
 
       {/* Stage filter */}
