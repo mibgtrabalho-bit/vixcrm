@@ -36,8 +36,8 @@ export function PipelineSummaryBar({ teamFilter, refreshKey }: PipelineSummaryBa
   const filter = useMemo(() => parsePipelineFilter(teamFilter), [teamFilter]);
 
   useEffect(() => {
-    if (profile?.tenant_id && user?.id) fetchSummary();
-  }, [profile?.tenant_id, user?.id, teamFilter, refreshKey, monthStr]);
+    if (profile?.tenant_id && user?.id && role) fetchSummary();
+  }, [profile?.tenant_id, user?.id, role, teamFilter, refreshKey, monthStr]);
 
   const fetchSummary = async () => {
     if (!user?.id) return;
