@@ -62,20 +62,28 @@ export function PipelineTeamFilter({ value, onChange }: PipelineTeamFilterProps)
 
       teamIds = (teams || []).map((t) => t.id);
 
-      // Fetch all members with profiles for each team
+      // Fetch members and profiles separately to avoid FK join issues
       const { data: members } = await supabase
         .from("team_members")
-        .select("team_id, user_id, profiles:user_id(full_name)")
+        .select("team_id, user_id")
         .in("team_id", teamIds);
+
+      const memberUserIds = [...new Set((members || []).map((m: any) => m.user_id))];
+
+      const { data: profiles } = memberUserIds.length > 0
+        ? await supabase.from("profiles").select("user_id, full_name").in("user_id", memberUserIds)
+        : { data: [] };
+
+      const profileMap = new Map((profiles || []).map((p: any) => [p.user_id, p.full_name]));
 
       const teamsMap: TeamWithMembers[] = (teams || []).map((t) => ({
         id: t.id,
         name: t.name,
         members: (members || [])
-          .filter((m: any) => m.team_id === t.id)
+          .filter((m: any) => m.team_id === t.id && profileMap.has(m.user_id))
           .map((m: any) => ({
             user_id: m.user_id,
-            full_name: (m.profiles as any)?.full_name || "Sem nome",
+            full_name: profileMap.get(m.user_id) || "Sem nome",
           }))
           .sort((a: any, b: any) => a.full_name.localeCompare(b.full_name)),
       }));
@@ -93,17 +101,25 @@ export function PipelineTeamFilter({ value, onChange }: PipelineTeamFilterProps)
 
       const { data: members } = await supabase
         .from("team_members")
-        .select("team_id, user_id, profiles:user_id(full_name)")
+        .select("team_id, user_id")
         .in("team_id", teamIds);
+
+      const memberUserIds = [...new Set((members || []).map((m: any) => m.user_id))];
+
+      const { data: profiles } = memberUserIds.length > 0
+        ? await supabase.from("profiles").select("user_id, full_name").in("user_id", memberUserIds)
+        : { data: [] };
+
+      const profileMap = new Map((profiles || []).map((p: any) => [p.user_id, p.full_name]));
 
       const teamsMap: TeamWithMembers[] = teams.map((t: any) => ({
         id: t.id,
         name: t.name,
         members: (members || [])
-          .filter((m: any) => m.team_id === t.id)
+          .filter((m: any) => m.team_id === t.id && profileMap.has(m.user_id))
           .map((m: any) => ({
             user_id: m.user_id,
-            full_name: (m.profiles as any)?.full_name || "Sem nome",
+            full_name: profileMap.get(m.user_id) || "Sem nome",
           }))
           .sort((a: any, b: any) => a.full_name.localeCompare(b.full_name)),
       }));
