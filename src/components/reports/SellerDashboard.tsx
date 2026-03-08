@@ -3,84 +3,30 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { PIPELINE_STAGES } from "@/lib/constants";
+import { formatCurrency, getPeriodRange, isClosedInPeriod, sumField } from "@/lib/metrics";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
+  Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
-import {
-  Target,
-  DollarSign,
-  TrendingUp,
-  Clock,
-  BarChart3,
-  Layers,
-} from "lucide-react";
+import { Target, DollarSign, TrendingUp, Clock, Layers } from "lucide-react";
 
 interface SellerDashboardProps {
   filters: { period: string; stage: string; team: string };
 }
 
-function fmt(val: number) {
-  return new Intl.NumberFormat("pt-BR", {
-    style: "currency",
-    currency: "BRL",
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 0,
-  }).format(val);
-}
-
-function getPeriodRange(period: string): { start: Date; end: Date; monthStr: string } {
-  const now = new Date();
-  const y = now.getFullYear();
-  const m = now.getMonth();
-
-  let start: Date;
-  let end: Date;
-
-  switch (period) {
-    case "last_month":
-      start = new Date(y, m - 1, 1);
-      end = new Date(y, m, 0, 23, 59, 59);
-      break;
-    case "current_quarter": {
-      const qStart = Math.floor(m / 3) * 3;
-      start = new Date(y, qStart, 1);
-      end = new Date(y, qStart + 3, 0, 23, 59, 59);
-      break;
-    }
-    case "current_year":
-      start = new Date(y, 0, 1);
-      end = new Date(y, 11, 31, 23, 59, 59);
-      break;
-    default: // current_month
-      start = new Date(y, m, 1);
-      end = new Date(y, m + 1, 0, 23, 59, 59);
-  }
-
-  const monthStr = `${start.getFullYear()}-${String(start.getMonth() + 1).padStart(2, "0")}-01`;
-  return { start, end, monthStr };
-}
-
 export function SellerDashboard({ filters }: SellerDashboardProps) {
-  const { user, profile } = useAuth();
+  const { user } = useAuth();
   const { start, end, monthStr } = useMemo(() => getPeriodRange(filters.period), [filters.period]);
 
-  // Fetch all seller opportunities in period
-  const { data: opportunities = [] } = useQuery({
-    queryKey: ["seller-dash-opps", user?.id, filters.period, filters.stage],
+  // Fetch all seller opportunities (no created_at filter — we filter closing date client-side)
+  const { data: allOpportunities = [] } = useQuery({
+    queryKey: ["seller-dash-opps", user?.id, filters.stage],
     queryFn: async () => {
       let q = supabase
         .from("opportunities")
-        .select("id, title, value, value_saas, value_implantacao, stage, created_at, first_closed_at, company_id, companies(name)")
-        .eq("assigned_to", user!.id)
-        .gte("created_at", start.toISOString())
-        .lte("created_at", end.toISOString());
+        .select("id, title, value, value_saas, value_implantacao, stage, created_at, first_closed_at, updated_at, company_id, companies(name)")
+        .eq("assigned_to", user!.id);
 
       if (filters.stage !== "all") {
         q = q.eq("stage", filters.stage as any);
@@ -92,7 +38,7 @@ export function SellerDashboard({ filters }: SellerDashboardProps) {
     enabled: !!user?.id,
   });
 
-  // Fetch target
+  // Fetch target (same source as Goals page: monthly_targets)
   const { data: target } = useQuery({
     queryKey: ["seller-dash-target", user?.id, monthStr],
     queryFn: async () => {
@@ -107,43 +53,48 @@ export function SellerDashboard({ filters }: SellerDashboardProps) {
     enabled: !!user?.id,
   });
 
-  // Derived metrics
+  // Closed in period — uses canonical closing date (first_closed_at || updated_at)
+  const closed = useMemo(
+    () => allOpportunities.filter((o: any) => o.stage === "fechado" && isClosedInPeriod(o, start, end)),
+    [allOpportunities, start, end],
+  );
+
+  // Active pipeline (no period filter — shows current state)
+  const pipeline = useMemo(
+    () => allOpportunities.filter((o: any) => o.stage !== "fechado" && o.stage !== "perdido"),
+    [allOpportunities],
+  );
+
+  // Stage distribution (all opps, regardless of period, for pipeline visibility)
   const stageMap = useMemo(() => {
     const map: Record<string, { count: number; value: number }> = {};
     PIPELINE_STAGES.forEach((s) => (map[s.id] = { count: 0, value: 0 }));
-    opportunities.forEach((o: any) => {
+    allOpportunities.forEach((o: any) => {
       if (map[o.stage]) {
         map[o.stage].count += 1;
         map[o.stage].value += Number(o.value) || 0;
       }
     });
     return map;
-  }, [opportunities]);
+  }, [allOpportunities]);
 
-  const closed = useMemo(() => opportunities.filter((o: any) => o.stage === "fechado"), [opportunities]);
-  const pipeline = useMemo(() => opportunities.filter((o: any) => o.stage !== "fechado" && o.stage !== "perdido"), [opportunities]);
-
-  const closedSaas = closed.reduce((s: number, o: any) => s + (Number(o.value_saas) || 0), 0);
-  const closedSetup = closed.reduce((s: number, o: any) => s + (Number(o.value_implantacao) || 0), 0);
-  const pipelineSaas = pipeline.reduce((s: number, o: any) => s + (Number(o.value_saas) || 0), 0);
-  const pipelineSetup = pipeline.reduce((s: number, o: any) => s + (Number(o.value_implantacao) || 0), 0);
+  const closedSaas = sumField(closed, "value_saas");
+  const closedSetup = sumField(closed, "value_implantacao");
+  const pipelineSaas = sumField(pipeline, "value_saas");
+  const pipelineSetup = sumField(pipeline, "value_implantacao");
 
   const targetSaas = target?.target_saas ?? 0;
   const targetSetup = target?.target_setup ?? 0;
   const pctSaas = targetSaas > 0 ? Math.min((closedSaas / targetSaas) * 100, 100) : 0;
   const pctSetup = targetSetup > 0 ? Math.min((closedSetup / targetSetup) * 100, 100) : 0;
 
-  const totalSold = closed.reduce((s: number, o: any) => s + (Number(o.value) || 0), 0);
+  const totalSold = sumField(closed, "value");
   const avgTicket = closed.length > 0 ? totalSold / closed.length : 0;
 
-  // Average cycle
   const avgCycleDays = useMemo(() => {
     const cycles = closed
       .filter((o: any) => o.first_closed_at && o.created_at)
-      .map((o: any) => {
-        const diff = new Date(o.first_closed_at).getTime() - new Date(o.created_at).getTime();
-        return diff / (1000 * 60 * 60 * 24);
-      });
+      .map((o: any) => (new Date(o.first_closed_at).getTime() - new Date(o.created_at).getTime()) / 86400000);
     return cycles.length > 0 ? Math.round(cycles.reduce((a, b) => a + b, 0) / cycles.length) : 0;
   }, [closed]);
 
@@ -157,9 +108,9 @@ export function SellerDashboard({ filters }: SellerDashboardProps) {
             <Target className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent className="space-y-2">
-            <p className="text-2xl font-bold">{fmt(targetSaas)}</p>
+            <p className="text-2xl font-bold">{formatCurrency(targetSaas)}</p>
             <div className="flex items-center justify-between text-xs text-muted-foreground">
-              <span>Realizado: {fmt(closedSaas)}</span>
+              <span>Realizado: {formatCurrency(closedSaas)}</span>
               <span>{pctSaas.toFixed(0)}%</span>
             </div>
             <Progress value={pctSaas} className="h-1.5" />
@@ -172,9 +123,9 @@ export function SellerDashboard({ filters }: SellerDashboardProps) {
             <Target className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent className="space-y-2">
-            <p className="text-2xl font-bold">{fmt(targetSetup)}</p>
+            <p className="text-2xl font-bold">{formatCurrency(targetSetup)}</p>
             <div className="flex items-center justify-between text-xs text-muted-foreground">
-              <span>Realizado: {fmt(closedSetup)}</span>
+              <span>Realizado: {formatCurrency(closedSetup)}</span>
               <span>{pctSetup.toFixed(0)}%</span>
             </div>
             <Progress value={pctSetup} className="h-1.5" />
@@ -187,8 +138,8 @@ export function SellerDashboard({ filters }: SellerDashboardProps) {
             <TrendingUp className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <p className="text-2xl font-bold">{fmt(pipelineSaas)}</p>
-            <p className="text-xs text-muted-foreground mt-1">Setup: {fmt(pipelineSetup)}</p>
+            <p className="text-2xl font-bold">{formatCurrency(pipelineSaas)}</p>
+            <p className="text-xs text-muted-foreground mt-1">Setup: {formatCurrency(pipelineSetup)}</p>
           </CardContent>
         </Card>
 
@@ -199,7 +150,7 @@ export function SellerDashboard({ filters }: SellerDashboardProps) {
           </CardHeader>
           <CardContent>
             <p className="text-2xl font-bold">{avgCycleDays} dias</p>
-            <p className="text-xs text-muted-foreground mt-1">Ticket médio: {fmt(avgTicket)}</p>
+            <p className="text-xs text-muted-foreground mt-1">Ticket médio: {formatCurrency(avgTicket)}</p>
           </CardContent>
         </Card>
       </div>
@@ -218,7 +169,7 @@ export function SellerDashboard({ filters }: SellerDashboardProps) {
               <div key={s.id} className="rounded-lg border border-border/60 p-3 text-center">
                 <p className="text-xs text-muted-foreground truncate">{s.label}</p>
                 <p className="text-lg font-bold mt-1">{stageMap[s.id]?.count ?? 0}</p>
-                <p className="text-xs text-muted-foreground">{fmt(stageMap[s.id]?.value ?? 0)}</p>
+                <p className="text-xs text-muted-foreground">{formatCurrency(stageMap[s.id]?.value ?? 0)}</p>
               </div>
             ))}
           </div>
@@ -232,7 +183,7 @@ export function SellerDashboard({ filters }: SellerDashboardProps) {
             <DollarSign className="h-4 w-4" />
             Vendas Realizadas
             <span className="ml-auto text-xs font-normal text-muted-foreground">
-              Total: {fmt(totalSold)} · Ticket médio: {fmt(avgTicket)} · {closed.length} venda(s)
+              Total: {formatCurrency(totalSold)} · Ticket médio: {formatCurrency(avgTicket)} · {closed.length} venda(s)
             </span>
           </CardTitle>
         </CardHeader>
@@ -255,7 +206,7 @@ export function SellerDashboard({ filters }: SellerDashboardProps) {
                     <TableRow key={o.id}>
                       <TableCell className="text-sm">{o.companies?.name || "—"}</TableCell>
                       <TableCell className="text-sm">{o.title}</TableCell>
-                      <TableCell className="text-sm text-right">{fmt(Number(o.value) || 0)}</TableCell>
+                      <TableCell className="text-sm text-right">{formatCurrency(Number(o.value) || 0)}</TableCell>
                       <TableCell className="text-sm text-right">
                         {o.first_closed_at
                           ? new Date(o.first_closed_at).toLocaleDateString("pt-BR")
