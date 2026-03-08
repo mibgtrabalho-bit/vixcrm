@@ -53,6 +53,8 @@ export default function Pipeline() {
         </Button>
       </PageHeader>
 
+      <PipelineSummaryBar teamFilter={teamFilter} refreshKey={refreshKey} />
+
       {viewMode === "kanban" ? (
         <KanbanBoard key={refreshKey} teamFilter={teamFilter} />
       ) : (
