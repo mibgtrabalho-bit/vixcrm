@@ -36,7 +36,11 @@ function KanbanSkeleton() {
   );
 }
 
-export function KanbanBoard() {
+interface KanbanBoardProps {
+  teamFilter?: string;
+}
+
+export function KanbanBoard({ teamFilter = "all" }: KanbanBoardProps) {
   const [opportunities, setOpportunities] = useState<Opportunity[]>([]);
   const [loading, setLoading] = useState(true);
   const [editingOpp, setEditingOpp] = useState<Opportunity | null>(null);
@@ -47,13 +51,30 @@ export function KanbanBoard() {
     value: string;
   }>({ open: false, opportunityId: "", value: "" });
   const [pendingDrop, setPendingDrop] = useState<DropResult | null>(null);
+  const [teamMemberIds, setTeamMemberIds] = useState<string[] | null>(null);
   const { profile } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
+  // Fetch team member IDs when teamFilter changes
+  useEffect(() => {
+    if (teamFilter === "all") {
+      setTeamMemberIds(null);
+      return;
+    }
+    const fetchTeamMembers = async () => {
+      const { data } = await supabase
+        .from("team_members")
+        .select("user_id")
+        .eq("team_id", teamFilter);
+      setTeamMemberIds((data || []).map((m) => m.user_id));
+    };
+    fetchTeamMembers();
+  }, [teamFilter]);
+
   useEffect(() => {
     if (profile?.tenant_id) fetchOpportunities();
-  }, [profile?.tenant_id]);
+  }, [profile?.tenant_id, teamMemberIds]);
 
   const fetchOpportunities = async () => {
     const { data, error } = await supabase
