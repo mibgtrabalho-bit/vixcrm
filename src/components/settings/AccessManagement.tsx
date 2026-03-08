@@ -80,6 +80,13 @@ interface InvitationRow {
   team_name: string | null;
 }
 
+// Always use the published URL for invite links so end users never hit
+// the Lovable preview URL (which requires workspace auth).
+const PUBLISHED_ORIGIN = "https://vixcrm.lovable.app";
+
+const getInviteLink = (token: string) =>
+  `${PUBLISHED_ORIGIN}/auth?invite=${token}`;
+
 export function AccessManagement() {
   const { user, profile, role } = useAuth();
   const { toast } = useToast();
