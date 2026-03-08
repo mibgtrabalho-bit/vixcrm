@@ -3,6 +3,7 @@ import { AppLayout } from "@/components/layout/AppLayout";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { KanbanBoard } from "@/components/pipeline/KanbanBoard";
 import { PipelineListView } from "@/components/pipeline/PipelineListView";
+import { PipelineSummaryBar } from "@/components/pipeline/PipelineSummaryBar";
 import { CreateOpportunityDialog } from "@/components/pipeline/CreateOpportunityDialog";
 import { PipelineTeamFilter } from "@/components/pipeline/PipelineTeamFilter";
 import { ExportCsvDialog } from "@/components/pipeline/ExportCsvDialog";
@@ -51,6 +52,8 @@ export default function Pipeline() {
           Nova Oportunidade
         </Button>
       </PageHeader>
+
+      <PipelineSummaryBar teamFilter={teamFilter} refreshKey={refreshKey} />
 
       {viewMode === "kanban" ? (
         <KanbanBoard key={refreshKey} teamFilter={teamFilter} />
