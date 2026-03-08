@@ -180,6 +180,11 @@ export function AccessManagement() {
     fetchAll();
   }, [fetchAll]);
 
+  const validateCnpj = (cnpj: string) => {
+    const cleaned = cnpj.replace(/\D/g, "");
+    return cleaned.length === 14;
+  };
+
   const handleInvite = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!user || !profile) return;
@@ -188,7 +193,25 @@ export function AccessManagement() {
       toast({ title: "Time obrigatório", description: "Selecione um time para o convite.", variant: "destructive" });
       return;
     }
+    if (!tenantCnpj || !validateCnpj(tenantCnpj)) {
+      toast({ title: "CNPJ inválido", description: "Informe um CNPJ válido com 14 dígitos.", variant: "destructive" });
+      return;
+    }
     setInviteLoading(true);
+
+    // Save CNPJ to tenant if not yet saved
+    if (!cnpjSaved) {
+      const { error: cnpjError } = await supabase
+        .from("tenants")
+        .update({ cnpj: tenantCnpj.replace(/\D/g, "") } as any)
+        .eq("id", profile.tenant_id);
+      if (cnpjError) {
+        toast({ title: "Erro ao salvar CNPJ", description: cnpjError.message, variant: "destructive" });
+        setInviteLoading(false);
+        return;
+      }
+      setCnpjSaved(true);
+    }
 
     const { data, error } = await supabase
       .from("invitations")
