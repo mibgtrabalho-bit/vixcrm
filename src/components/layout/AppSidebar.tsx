@@ -26,8 +26,7 @@ interface NavItem {
 }
 
 const baseNavItems: NavItem[] = [
-  { icon: LayoutDashboard, label: "Dashboard", href: "/" },
-  { icon: Kanban, label: "Pipeline", href: "/pipeline" },
+  { icon: Kanban, label: "Pipeline", href: "/" },
   { icon: Users, label: "Contatos", href: "/contacts" },
   { icon: Building2, label: "Empresas", href: "/companies" },
 ];

@@ -1,245 +1,77 @@
-import { useState, useEffect } from "react";
+import { useState, useCallback } from "react";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { PageHeader } from "@/components/layout/PageHeader";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-} from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
-import { Checkbox } from "@/components/ui/checkbox";
-import { Label } from "@/components/ui/label";
-import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/contexts/AuthContext";
-import { useQuery } from "@tanstack/react-query";
-import { DollarSign, TrendingUp, BarChart3, Repeat, Settings2, Zap, Target } from "lucide-react";
+import { StrategicSummary } from "@/components/home/StrategicSummary";
+import { KanbanBoard } from "@/components/pipeline/KanbanBoard";
+import { PipelineListView } from "@/components/pipeline/PipelineListView";
+import { CreateOpportunityDialog } from "@/components/pipeline/CreateOpportunityDialog";
 import { PipelineTeamFilter } from "@/components/pipeline/PipelineTeamFilter";
-
-type WidgetId = "vendas_realizadas" | "vendas_projetadas" | "conversao" | "venda_saas" | "venda_implantacao" | "arr";
-
-interface WidgetDef {
-  id: WidgetId;
-  label: string;
-  icon: React.ElementType;
-  format: "currency" | "percent";
-}
-
-const ALL_WIDGETS: WidgetDef[] = [
-  { id: "vendas_realizadas", label: "Vendas Realizadas", icon: DollarSign, format: "currency" },
-  { id: "vendas_projetadas", label: "Vendas Projetadas", icon: TrendingUp, format: "currency" },
-  { id: "conversao", label: "Conversão de Vendas", icon: Target, format: "percent" },
-  { id: "venda_saas", label: "Venda SaaS", icon: Repeat, format: "currency" },
-  { id: "venda_implantacao", label: "Venda Implantação", icon: Zap, format: "currency" },
-  { id: "arr", label: "ARR", icon: BarChart3, format: "currency" },
-];
-
-const STORAGE_KEY = "dashboard_widgets";
-const DEFAULT_WIDGETS: WidgetId[] = ["vendas_realizadas", "vendas_projetadas", "conversao", "arr"];
-
-async function resolveFilterUserIds(filterValue: string): Promise<string[] | null> {
-  if (filterValue === "all") return null;
-
-  if (filterValue.startsWith("user:")) {
-    return [filterValue.slice(5)];
-  }
-
-  // team filter
-  const teamId = filterValue.startsWith("team:") ? filterValue.slice(5) : filterValue;
-  const { data } = await supabase
-    .from("team_members")
-    .select("user_id")
-    .eq("team_id", teamId);
-
-  const ids = (data || []).map((m) => m.user_id);
-  return ids.length > 0 ? ids : [];
-}
-
-async function fetchDashboardStats(filterUserIds: string[] | null) {
-  let query = supabase
-    .from("opportunities")
-    .select("id, value, value_implantacao, value_saas, first_payment_date, stage");
-
-  if (filterUserIds !== null) {
-    if (filterUserIds.length === 0) {
-      return {
-        vendas_realizadas: 0,
-        vendas_projetadas: 0,
-        conversao: 0,
-        venda_saas: 0,
-        venda_implantacao: 0,
-        arr: 0,
-      } as Record<WidgetId, number>;
-    }
-    query = query.in("assigned_to", filterUserIds);
-  }
-
-  const { data: opps } = await query;
-  const opportunities = opps || [];
-
-  const fechados = opportunities.filter((o) => o.stage === "fechado");
-  const negociacao = opportunities.filter((o) => o.stage === "negociacao");
-
-  const vendasRealizadas = fechados.reduce((s, o) => s + (Number(o.value) || 0), 0);
-  const vendasProjetadas = negociacao.reduce((s, o) => s + (Number(o.value) || 0), 0);
-
-  const total = opportunities.length;
-  const closedCount = fechados.length;
-  const conversao = total > 0 ? (closedCount / total) * 100 : 0;
-
-  const vendaSaas = fechados.reduce((s, o) => s + (Number(o.value_saas) || 0), 0);
-  const vendaImpl = fechados.reduce((s, o) => s + (Number(o.value_implantacao) || 0), 0);
-
-  const currentYear = new Date().getFullYear();
-  const endOfYear = new Date(currentYear, 11, 31);
-  let arr = 0;
-  for (const o of fechados) {
-    arr += Number(o.value_implantacao) || 0;
-    const saasMonthly = Number(o.value_saas) || 0;
-    if (saasMonthly > 0 && o.first_payment_date) {
-      const firstDate = new Date(o.first_payment_date);
-      if (firstDate <= endOfYear) {
-        const startMonth = firstDate.getFullYear() === currentYear ? firstDate.getMonth() : 0;
-        const months = 12 - startMonth;
-        arr += saasMonthly * months;
-      }
-    }
-  }
-
-  return {
-    vendas_realizadas: vendasRealizadas,
-    vendas_projetadas: vendasProjetadas,
-    conversao,
-    venda_saas: vendaSaas,
-    venda_implantacao: vendaImpl,
-    arr,
-  } as Record<WidgetId, number>;
-}
+import { ExportCsvDialog } from "@/components/pipeline/ExportCsvDialog";
+import { Button } from "@/components/ui/button";
+import { Plus, LayoutGrid, List, Download } from "lucide-react";
 
 export default function Dashboard() {
-  const { profile } = useAuth();
-  const [configOpen, setConfigOpen] = useState(false);
+  const [createOpen, setCreateOpen] = useState(false);
+  const [exportOpen, setExportOpen] = useState(false);
+  const [viewMode, setViewMode] = useState<"kanban" | "list">("kanban");
+  const [refreshKey, setRefreshKey] = useState(0);
   const [teamFilter, setTeamFilter] = useState("all");
-  const [filterUserIds, setFilterUserIds] = useState<string[] | null>(null);
-  const [filterResolved, setFilterResolved] = useState(false);
-  const [selectedWidgets, setSelectedWidgets] = useState<WidgetId[]>(() => {
-    try {
-      const saved = localStorage.getItem(STORAGE_KEY);
-      return saved ? JSON.parse(saved) : DEFAULT_WIDGETS;
-    } catch {
-      return DEFAULT_WIDGETS;
-    }
-  });
-  const [tempSelection, setTempSelection] = useState<WidgetId[]>([]);
 
-  // Resolve filter to user IDs
-  useEffect(() => {
-    let cancelled = false;
-    setFilterResolved(false);
-    resolveFilterUserIds(teamFilter).then((ids) => {
-      if (!cancelled) {
-        setFilterUserIds(ids);
-        setFilterResolved(true);
-      }
-    });
-    return () => { cancelled = true; };
-  }, [teamFilter]);
-
-  const { data: values } = useQuery({
-    queryKey: ["dashboard-stats", filterUserIds],
-    queryFn: () => fetchDashboardStats(filterUserIds),
-    enabled: !!profile?.tenant_id && filterResolved,
-    staleTime: 0,
-    refetchOnWindowFocus: true,
-    initialData: {
-      vendas_realizadas: 0,
-      vendas_projetadas: 0,
-      conversao: 0,
-      venda_saas: 0,
-      venda_implantacao: 0,
-      arr: 0,
-    },
-  });
-
-  const formatValue = (val: number, format: "currency" | "percent") => {
-    if (format === "percent") return `${val.toFixed(1).replace(".", ",")}%`;
-    return new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(val);
-  };
-
-  const openConfig = () => {
-    setTempSelection([...selectedWidgets]);
-    setConfigOpen(true);
-  };
-
-  const toggleWidget = (id: WidgetId) => {
-    setTempSelection((prev) => {
-      if (prev.includes(id)) return prev.filter((w) => w !== id);
-      if (prev.length >= 4) return prev;
-      return [...prev, id];
-    });
-  };
-
-  const saveConfig = () => {
-    setSelectedWidgets(tempSelection);
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(tempSelection));
-    setConfigOpen(false);
-  };
-
-  const activeWidgets = ALL_WIDGETS.filter((w) => selectedWidgets.includes(w.id));
+  const handleCreated = useCallback(() => {
+    setRefreshKey((k) => k + 1);
+  }, []);
 
   return (
     <AppLayout>
-      <PageHeader title="Dashboard" description="Visão geral do seu pipeline de vendas">
+      <PageHeader title="Pipeline" description="Gerencie suas oportunidades de venda">
         <PipelineTeamFilter value={teamFilter} onChange={setTeamFilter} />
-        <Button variant="outline" size="sm" onClick={openConfig}>
-          <Settings2 className="h-4 w-4 mr-1" />
-          Configurar
+        <div className="flex items-center gap-0.5 rounded-lg border border-border/60 bg-muted/50 p-0.5">
+          <button
+            onClick={() => setViewMode("kanban")}
+            className={`rounded-md p-1.5 transition-apple ${
+              viewMode === "kanban" ? "bg-background shadow-xs text-foreground" : "text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            <LayoutGrid className="h-4 w-4" />
+          </button>
+          <button
+            onClick={() => setViewMode("list")}
+            className={`rounded-md p-1.5 transition-apple ${
+              viewMode === "list" ? "bg-background shadow-xs text-foreground" : "text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            <List className="h-4 w-4" />
+          </button>
+        </div>
+        <Button variant="outline" size="sm" onClick={() => setExportOpen(true)}>
+          <Download className="h-4 w-4" />
+          Exportar CSV
+        </Button>
+        <Button onClick={() => setCreateOpen(true)} size="sm">
+          <Plus className="h-4 w-4" />
+          Nova Oportunidade
         </Button>
       </PageHeader>
 
-      <div className="p-6">
-        <div className={`grid gap-4 sm:grid-cols-2 ${activeWidgets.length > 2 ? "lg:grid-cols-4" : "lg:grid-cols-2"}`}>
-          {activeWidgets.map((widget) => (
-            <Card key={widget.id}>
-              <CardHeader className="flex flex-row items-center justify-between pb-2">
-                <CardTitle className="text-sm font-medium text-muted-foreground">{widget.label}</CardTitle>
-                <widget.icon className="h-4 w-4 text-muted-foreground" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">{formatValue(values[widget.id], widget.format)}</div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-      </div>
+      <StrategicSummary teamFilter={teamFilter} />
 
-      <Dialog open={configOpen} onOpenChange={setConfigOpen}>
-        <DialogContent className="max-w-sm">
-          <DialogHeader>
-            <DialogTitle>Configurar Dashboard</DialogTitle>
-            <DialogDescription>Selecione até 4 indicadores para exibir.</DialogDescription>
-          </DialogHeader>
-          <div className="space-y-3 py-2">
-            {ALL_WIDGETS.map((w) => (
-              <div key={w.id} className="flex items-center space-x-3">
-                <Checkbox
-                  id={w.id}
-                  checked={tempSelection.includes(w.id)}
-                  onCheckedChange={() => toggleWidget(w.id)}
-                  disabled={!tempSelection.includes(w.id) && tempSelection.length >= 4}
-                />
-                <Label htmlFor={w.id} className="cursor-pointer">{w.label}</Label>
-              </div>
-            ))}
-          </div>
-          <div className="flex justify-end gap-2 pt-2">
-            <Button variant="outline" onClick={() => setConfigOpen(false)}>Cancelar</Button>
-            <Button onClick={saveConfig} disabled={tempSelection.length === 0}>Salvar</Button>
-          </div>
-        </DialogContent>
-      </Dialog>
+      {viewMode === "kanban" ? (
+        <KanbanBoard key={refreshKey} teamFilter={teamFilter} />
+      ) : (
+        <PipelineListView key={refreshKey} teamFilter={teamFilter} />
+      )}
+
+      <CreateOpportunityDialog
+        open={createOpen}
+        onOpenChange={setCreateOpen}
+        onCreated={handleCreated}
+      />
+
+      <ExportCsvDialog
+        open={exportOpen}
+        onOpenChange={setExportOpen}
+        currentFilter={teamFilter}
+      />
     </AppLayout>
   );
 }

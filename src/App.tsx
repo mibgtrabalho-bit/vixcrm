@@ -62,7 +62,7 @@ function AppRoutes() {
     <Routes>
       <Route path="/auth" element={user && !new URLSearchParams(window.location.search).get("invite") ? <Navigate to="/" replace /> : <Auth />} />
       <Route path="/" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
-      <Route path="/pipeline" element={<ProtectedRoute><Pipeline /></ProtectedRoute>} />
+      <Route path="/pipeline" element={<Navigate to="/" replace />} />
       <Route path="/contacts" element={<ProtectedRoute><Contacts /></ProtectedRoute>} />
       <Route path="/companies" element={<ProtectedRoute><Companies /></ProtectedRoute>} />
       <Route path="/goals" element={<ManagerOrDirectorRoute><Goals /></ManagerOrDirectorRoute>} />
