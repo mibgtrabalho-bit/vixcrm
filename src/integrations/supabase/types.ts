@@ -189,6 +189,8 @@ export type Database = {
           created_at: string
           id: string
           month: string
+          target_saas: number
+          target_setup: number
           target_value: number
           tenant_id: string
           updated_at: string
@@ -198,6 +200,8 @@ export type Database = {
           created_at?: string
           id?: string
           month: string
+          target_saas?: number
+          target_setup?: number
           target_value?: number
           tenant_id: string
           updated_at?: string
@@ -207,6 +211,8 @@ export type Database = {
           created_at?: string
           id?: string
           month?: string
+          target_saas?: number
+          target_setup?: number
           target_value?: number
           tenant_id?: string
           updated_at?: string
