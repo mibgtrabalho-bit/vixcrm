@@ -155,12 +155,14 @@ export function AccessManagement() {
       team_name: teamMap.get(p.user_id) || null,
     }));
 
-    // Manager: filter to only users in their teams
+    // Manager: filter to only users who share a team with the manager
     if (isManager && !isDirector) {
-      const myTeamUserIds = new Set(
-        (teamMembers || []).map((tm: any) => tm.user_id)
+      const usersInMyTeams = new Set(
+        (teamMembers || [])
+          .filter((tm: any) => myTeamIds.has(tm.team_id))
+          .map((tm: any) => tm.user_id)
       );
-      setUsers(userRows.filter((u) => myTeamUserIds.has(u.user_id) || u.user_id === user?.id));
+      setUsers(userRows.filter((u) => usersInMyTeams.has(u.user_id) || u.user_id === user?.id));
     } else {
       setUsers(userRows);
     }
