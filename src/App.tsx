@@ -6,7 +6,7 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 import Auth from "./pages/Auth";
 import Dashboard from "./pages/Dashboard";
-import Pipeline from "./pages/Pipeline";
+// Pipeline now redirects to /
 import Contacts from "./pages/Contacts";
 import Companies from "./pages/Companies";
 import Goals from "./pages/Goals";
