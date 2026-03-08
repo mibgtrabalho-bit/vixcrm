@@ -318,8 +318,13 @@ export function TeamManagement() {
     }
   };
 
-  // Read-only view for non-directors
-  if (!isDirector) {
+  // Sellers: hide the team section entirely
+  if (role === "vendedor") {
+    return null;
+  }
+
+  // Read-only view for managers
+  if (role === "gestor") {
     if (teams.length === 0) return null;
 
     return (
