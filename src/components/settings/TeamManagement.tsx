@@ -153,7 +153,7 @@ export function TeamManagement() {
 
     // Unassigned: non-director users without any team membership (director only sees this)
     if (isDirector) {
-      const unassignedUsers: UnassignedUser[] = (profiles || [])
+      const unassignedUsers: UnassignedUser[] = activeProfiles
         .filter((p: any) => {
           const r = roleMap.get(p.user_id);
           return r !== "diretor" && !assignedUserIds.has(p.user_id);
