@@ -8,6 +8,7 @@ import { CreateOpportunityDialog } from "@/components/pipeline/CreateOpportunity
 import { PipelineTeamFilter } from "@/components/pipeline/PipelineTeamFilter";
 import { ExportCsvDialog } from "@/components/pipeline/ExportCsvDialog";
 import { Button } from "@/components/ui/button";
+import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 import { Plus, LayoutGrid, List, Download } from "lucide-react";
 
 export default function Pipeline() {
@@ -43,10 +44,19 @@ export default function Pipeline() {
             <List className="h-4 w-4" />
           </button>
         </div>
-        <Button variant="outline" size="sm" onClick={() => setExportOpen(true)}>
-          <Download className="h-4 w-4" />
-          Exportar CSV
-        </Button>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button
+              variant="outline"
+              size="icon"
+              onClick={() => setExportOpen(true)}
+              aria-label="Exportar CSV"
+            >
+              <Download className="h-4 w-4" />
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent>Exportar CSV</TooltipContent>
+        </Tooltip>
         <Button onClick={() => setCreateOpen(true)} size="sm">
           <Plus className="h-4 w-4" />
           Nova Oportunidade
