@@ -323,7 +323,6 @@ export function AccessManagement() {
     }
   };
 
-  const [deleteLoading, setDeleteLoading] = useState(false);
 
   const deleteUserAccess = async (targetUserId: string, userName: string) => {
     setDeleteLoading(true);
