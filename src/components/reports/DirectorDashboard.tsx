@@ -183,12 +183,16 @@ export function DirectorDashboard({ filters }: DirectorDashboardProps) {
     }).sort((a, b) => b.closedVal - a.closedVal);
   }, [sellerScopeIds, allOpportunities, profileMap, start, end]);
 
-  // Stage map
+  // Stage map — dual revenue
   const stageMap = useMemo(() => {
-    const map: Record<string, { count: number; value: number }> = {};
-    PIPELINE_STAGES.forEach((s) => (map[s.id] = { count: 0, value: 0 }));
+    const map: Record<string, { count: number; saas: number; setup: number }> = {};
+    PIPELINE_STAGES.forEach((s) => (map[s.id] = { count: 0, saas: 0, setup: 0 }));
     allOpportunities.forEach((o: any) => {
-      if (map[o.stage]) { map[o.stage].count += 1; map[o.stage].value += Number(o.value) || 0; }
+      if (map[o.stage]) {
+        map[o.stage].count += 1;
+        map[o.stage].saas += Number(o.value_saas) || 0;
+        map[o.stage].setup += Number(o.value_implantacao) || 0;
+      }
     });
     return map;
   }, [allOpportunities]);
@@ -283,7 +287,8 @@ export function DirectorDashboard({ filters }: DirectorDashboardProps) {
               <div key={s.id} className="rounded-lg border border-border/60 p-3 text-center">
                 <p className="text-xs text-muted-foreground truncate">{s.label}</p>
                 <p className="text-lg font-bold mt-1">{stageMap[s.id]?.count ?? 0}</p>
-                <p className="text-xs text-muted-foreground">{formatCurrency(stageMap[s.id]?.value ?? 0)}</p>
+                <p className="text-xs text-muted-foreground">Setup {formatCurrency(stageMap[s.id]?.setup ?? 0)}</p>
+                <p className="text-xs text-muted-foreground">SaaS/mês {formatCurrency(stageMap[s.id]?.saas ?? 0)}</p>
               </div>
             ))}
           </div>
@@ -358,17 +363,15 @@ export function DirectorDashboard({ filters }: DirectorDashboardProps) {
                        <TableCell className="text-sm font-medium">{s.name}</TableCell>
                        <TableCell className="text-sm text-right">{s.opps}</TableCell>
                        <TableCell className="text-sm text-right">
-                         <div className="font-medium">{formatCurrency(s.pipelineVal)}</div>
-                         <div className="text-xs text-muted-foreground">SaaS {formatCurrency(s.pipelineSaas)}</div>
-                         <div className="text-xs text-muted-foreground">Setup {formatCurrency(s.pipelineSetup)}</div>
-                       </TableCell>
-                       <TableCell className="text-sm text-right">
-                         <div className="font-medium">{formatCurrency(s.closedVal)}</div>
-                         <div className="text-xs text-muted-foreground">SaaS {formatCurrency(s.closedSaas)}</div>
-                         <div className="text-xs text-muted-foreground">Setup {formatCurrency(s.closedSetup)}</div>
-                       </TableCell>
-                       <TableCell className="text-sm text-right">{s.conversion.toFixed(1).replace(".", ",")}%</TableCell>
-                       <TableCell className="text-sm text-right">{formatCurrency(s.avgTicket)}</TableCell>
+                          <div className="text-xs text-muted-foreground">Setup {formatCurrency(s.pipelineSetup)}</div>
+                          <div className="text-xs text-muted-foreground">SaaS/mês {formatCurrency(s.pipelineSaas)}</div>
+                        </TableCell>
+                        <TableCell className="text-sm text-right">
+                          <div className="text-xs text-muted-foreground">Setup {formatCurrency(s.closedSetup)}</div>
+                          <div className="text-xs text-muted-foreground">SaaS/mês {formatCurrency(s.closedSaas)}</div>
+                        </TableCell>
+                        <TableCell className="text-sm text-right">{s.conversion.toFixed(1).replace(".", ",")}%</TableCell>
+                        <TableCell className="text-sm text-right">{formatCurrency(s.avgTicket)}</TableCell>
                      </TableRow>
                   ))}
                 </TableBody>
