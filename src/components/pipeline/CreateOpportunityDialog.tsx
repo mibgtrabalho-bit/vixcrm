@@ -144,9 +144,11 @@ export function CreateOpportunityDialog({ open, onOpenChange, onCreated }: Props
         setLoading(false);
         return;
       }
-      const { data: newCompany, error: companyError } = await supabase
+      const newCompanyId = crypto.randomUUID();
+      const { error: companyError } = await supabase
         .from("companies")
         .insert({
+          id: newCompanyId,
           name: newCompanyName.trim(),
           cnpj: newCompanyCnpj || null,
           address: newCompanyAddress || null,
@@ -154,16 +156,14 @@ export function CreateOpportunityDialog({ open, onOpenChange, onCreated }: Props
           contact_id: finalContactId,
           tenant_id: profile.tenant_id,
           created_by: user.id,
-        })
-        .select("id")
-        .single();
+        });
 
       if (companyError) {
         toast({ title: "Erro ao criar empresa", description: companyError.message, variant: "destructive" });
         setLoading(false);
         return;
       }
-      finalCompanyId = newCompany.id;
+      finalCompanyId = newCompanyId;
     }
 
     const numImplantacao = valueImplantacao ? parseFloat(valueImplantacao) : null;
