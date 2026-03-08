@@ -177,10 +177,12 @@ export function ManagerDashboard({ filters }: ManagerDashboardProps) {
       const closedVal = sumField(sellerClosed, "value");
       const pipelineVal = sumField(sellerPipeline, "value");
       const closedSaas = sumField(sellerClosed, "value_saas");
+      const closedSetup = sumField(sellerClosed, "value_implantacao");
       const pipelineSaas = sumField(sellerPipeline, "value_saas");
+      const pipelineSetup = sumField(sellerPipeline, "value_implantacao");
       const conv = sellerOpps.length > 0 ? (sellerClosed.length / sellerOpps.length) * 100 : 0;
       const avg = sellerClosed.length > 0 ? closedVal / sellerClosed.length : 0;
-      return { userId: uid, name: profileMap[uid] || "—", opps: sellerOpps.length, pipelineVal, pipelineSaas, closedVal, closedSaas, closedCount: sellerClosed.length, conversion: conv, avgTicket: avg };
+      return { userId: uid, name: profileMap[uid] || "—", opps: sellerOpps.length, pipelineVal, pipelineSaas, pipelineSetup, closedVal, closedSaas, closedSetup, closedCount: sellerClosed.length, conversion: conv, avgTicket: avg };
     }).sort((a, b) => b.closedVal - a.closedVal);
   }, [sellers, allOpportunitiesRaw, profileMap, start, end]);
 
