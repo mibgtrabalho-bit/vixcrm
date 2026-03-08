@@ -168,7 +168,7 @@ export function DirectorDashboard({ filters }: DirectorDashboardProps) {
 
   // Seller ranking
   const sellerRanking = useMemo(() => {
-    return scopeUserIds.map((uid) => {
+    return sellerScopeIds.map((uid) => {
       const so = allOpportunities.filter((o: any) => o.assigned_to === uid);
       const sc = so.filter((o: any) => o.stage === "fechado" && isClosedInPeriod(o, start, end));
       const sp = so.filter((o: any) => o.stage !== "fechado" && o.stage !== "perdido");

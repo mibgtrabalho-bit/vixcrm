@@ -51,12 +51,13 @@ export function ManagerDashboard({ filters }: ManagerDashboardProps) {
       const profileMap = Object.fromEntries((profiles || []).map((p: any) => [p.user_id, p.full_name]));
       const sellers = memberUserIds.filter((id) => roleMap[id] === "vendedor");
 
-      return { teams, teamIds, sellers, profileMap, members: members || [] };
+      return { teams, teamIds, sellers, allMemberIds: memberUserIds, profileMap, members: members || [] };
     },
     enabled: !!user?.id,
   });
 
   const sellers = teamData?.sellers || [];
+  const allMemberIds = teamData?.allMemberIds || [];
   const profileMap = teamData?.profileMap || {};
   const teamIds = teamData?.teamIds || [];
 
