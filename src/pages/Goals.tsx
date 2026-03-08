@@ -1,12 +1,12 @@
 import { useEffect, useState, useMemo } from "react";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { PageHeader } from "@/components/layout/PageHeader";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
-import { ChevronLeft, ChevronRight, Target, Save } from "lucide-react";
+import { ChevronLeft, ChevronRight, Save } from "lucide-react";
 import { toast } from "sonner";
 
 interface TargetRow {
@@ -14,6 +14,8 @@ interface TargetRow {
   user_id: string;
   month: string;
   target_value: number;
+  target_saas: number;
+  target_setup: number;
 }
 
 interface ProfileRow {
@@ -54,7 +56,7 @@ function formatPercent(val: number): string {
 }
 
 export default function Goals() {
-  const { profile, role } = useAuth();
+  const { profile, role, user } = useAuth();
   const [currentMonth, setCurrentMonth] = useState(() => {
     const now = new Date();
     return new Date(now.getFullYear(), now.getMonth(), 1);
@@ -62,11 +64,11 @@ export default function Goals() {
   const [targets, setTargets] = useState<TargetRow[]>([]);
   const [opportunities, setOpportunities] = useState<OpportunityRow[]>([]);
   const [profiles, setProfiles] = useState<ProfileRow[]>([]);
-  const [editValues, setEditValues] = useState<Record<string, string>>({});
+  const [editSaas, setEditSaas] = useState<Record<string, string>>({});
+  const [editSetup, setEditSetup] = useState<Record<string, string>>({});
   const [saving, setSaving] = useState(false);
   const [loading, setLoading] = useState(true);
 
-  const { user } = useAuth();
   const canEdit = role === "gestor" || role === "diretor";
   const monthStr = getMonthStart(currentMonth);
   const monthEndStr = getMonthEnd(currentMonth);
@@ -78,20 +80,16 @@ export default function Goals() {
   const fetchData = async () => {
     setLoading(true);
 
-    // Fetch targets for this month
     const { data: targetData } = await supabase
       .from("monthly_targets")
-      .select("id, user_id, month, target_value")
+      .select("id, user_id, month, target_value, target_saas, target_setup")
       .eq("month", monthStr);
 
-    // Fetch closed opportunities for this month using server-side filters
-    // We filter by first_closed_at within the month range, OR stage=fechado + updated_at in range (for backfill)
     const { data: oppData } = await supabase
       .from("opportunities")
       .select("assigned_to, value_implantacao, value_saas, stage, first_closed_at, updated_at")
       .eq("stage", "fechado");
 
-    // Fetch tenant profiles (for name display)
     const { data: profileData } = await supabase
       .from("profiles")
       .select("user_id, full_name");
@@ -100,42 +98,41 @@ export default function Goals() {
     setOpportunities(oppData || []);
     setProfiles(profileData || []);
 
-    // Init edit values from targets
-    const edits: Record<string, string> = {};
-    (targetData || []).forEach((t) => {
-      edits[t.user_id] = String(t.target_value);
+    const saasEdits: Record<string, string> = {};
+    const setupEdits: Record<string, string> = {};
+    (targetData || []).forEach((t: any) => {
+      saasEdits[t.user_id] = String(t.target_saas ?? 0);
+      setupEdits[t.user_id] = String(t.target_setup ?? 0);
     });
-    setEditValues(edits);
+    setEditSaas(saasEdits);
+    setEditSetup(setupEdits);
     setLoading(false);
   };
 
-  // Filter closed opportunities to only those closed in the selected month
   const closedInMonth = useMemo(() => {
     return opportunities.filter((o) => {
-      // Use first_closed_at if available, otherwise fall back to updated_at for historical data
       const closedDate = o.first_closed_at || o.updated_at;
       if (!closedDate) return false;
-      const d = closedDate.slice(0, 10); // YYYY-MM-DD
+      const d = closedDate.slice(0, 10);
       return d >= monthStr && d <= monthEndStr;
     });
   }, [opportunities, monthStr, monthEndStr]);
 
-  // Determine which users to show based on role
   const visibleUsers = useMemo(() => {
     if (!user) return [];
     if (role === "vendedor") {
       return profiles.filter((p) => p.user_id === user.id);
     }
-    // gestor/diretor see all tenant profiles (RLS already scopes)
     return profiles;
   }, [profiles, user, role]);
 
-  // Calculate closed amount per user for the month
+  // Separate closed amounts per user: saas and setup
   const closedByUser = useMemo(() => {
-    const map: Record<string, number> = {};
+    const map: Record<string, { saas: number; setup: number }> = {};
     closedInMonth.forEach((o) => {
-      const amount = (Number(o.value_implantacao) || 0) + (Number(o.value_saas) || 0);
-      map[o.assigned_to] = (map[o.assigned_to] || 0) + amount;
+      if (!map[o.assigned_to]) map[o.assigned_to] = { saas: 0, setup: 0 };
+      map[o.assigned_to].saas += Number(o.value_saas) || 0;
+      map[o.assigned_to].setup += Number(o.value_implantacao) || 0;
     });
     return map;
   }, [closedInMonth]);
@@ -149,14 +146,17 @@ export default function Goals() {
     setSaving(true);
 
     try {
-      for (const userId of Object.keys(editValues)) {
-        const val = parseFloat(editValues[userId]) || 0;
+      const allUserIds = new Set([...Object.keys(editSaas), ...Object.keys(editSetup)]);
+      for (const userId of allUserIds) {
+        const saasVal = parseFloat(editSaas[userId]) || 0;
+        const setupVal = parseFloat(editSetup[userId]) || 0;
+        const totalVal = saasVal + setupVal;
         const existing = targets.find((t) => t.user_id === userId);
 
         if (existing?.id) {
           await supabase
             .from("monthly_targets")
-            .update({ target_value: val })
+            .update({ target_saas: saasVal, target_setup: setupVal, target_value: totalVal })
             .eq("id", existing.id);
         } else {
           await supabase
@@ -165,7 +165,9 @@ export default function Goals() {
               tenant_id: profile.tenant_id,
               user_id: userId,
               month: monthStr,
-              target_value: val,
+              target_value: totalVal,
+              target_saas: saasVal,
+              target_setup: setupVal,
             });
         }
       }
@@ -177,8 +179,6 @@ export default function Goals() {
       setSaving(false);
     }
   };
-
-
 
   return (
     <AppLayout>
@@ -218,58 +218,80 @@ export default function Goals() {
             </CardContent>
           </Card>
         ) : (
-          <div className="rounded-xl border border-border overflow-hidden">
+          <div className="rounded-xl border border-border overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-border bg-muted/50">
                   <th className="text-left px-4 py-3 font-medium text-muted-foreground">Vendedor</th>
-                  <th className="text-right px-4 py-3 font-medium text-muted-foreground">Meta</th>
-                  <th className="text-right px-4 py-3 font-medium text-muted-foreground">Realizado</th>
-                  <th className="text-right px-4 py-3 font-medium text-muted-foreground">Atingimento</th>
+                  <th className="text-right px-4 py-3 font-medium text-muted-foreground">Meta SaaS</th>
+                  <th className="text-right px-4 py-3 font-medium text-muted-foreground">Realizado SaaS</th>
+                  <th className="text-right px-4 py-3 font-medium text-muted-foreground">% SaaS</th>
+                  <th className="text-right px-4 py-3 font-medium text-muted-foreground">Meta Setup</th>
+                  <th className="text-right px-4 py-3 font-medium text-muted-foreground">Realizado Setup</th>
+                  <th className="text-right px-4 py-3 font-medium text-muted-foreground">% Setup</th>
                 </tr>
               </thead>
               <tbody>
-                {visibleUsers.map((user) => {
-                  const targetVal = parseFloat(editValues[user.user_id] || "0") || 0;
-                  const closedVal = closedByUser[user.user_id] || 0;
-                  const attainment = targetVal > 0 ? (closedVal / targetVal) * 100 : 0;
+                {visibleUsers.map((u) => {
+                  const saasTarget = parseFloat(editSaas[u.user_id] || "0") || 0;
+                  const setupTarget = parseFloat(editSetup[u.user_id] || "0") || 0;
+                  const closed = closedByUser[u.user_id] || { saas: 0, setup: 0 };
+                  const saasAtt = saasTarget > 0 ? (closed.saas / saasTarget) * 100 : 0;
+                  const setupAtt = setupTarget > 0 ? (closed.setup / setupTarget) * 100 : 0;
+
+                  const attColor = (val: number) =>
+                    val >= 100
+                      ? "text-green-600 font-semibold"
+                      : val >= 50
+                      ? "text-amber-600 font-medium"
+                      : "text-muted-foreground";
 
                   return (
-                    <tr key={user.user_id} className="border-b border-border last:border-b-0 transition-apple hover:bg-muted/30">
-                      <td className="px-4 py-3 font-medium">{user.full_name}</td>
+                    <tr key={u.user_id} className="border-b border-border last:border-b-0 transition-apple hover:bg-muted/30">
+                      <td className="px-4 py-3 font-medium">{u.full_name}</td>
+                      {/* SaaS */}
                       <td className="px-4 py-3 text-right">
                         {canEdit ? (
                           <Input
                             type="number"
                             min={0}
                             step={100}
-                            className="w-36 ml-auto text-right"
-                            value={editValues[user.user_id] ?? ""}
+                            className="w-32 ml-auto text-right"
+                            value={editSaas[u.user_id] ?? ""}
                             onChange={(e) =>
-                              setEditValues((prev) => ({
-                                ...prev,
-                                [user.user_id]: e.target.value,
-                              }))
+                              setEditSaas((prev) => ({ ...prev, [u.user_id]: e.target.value }))
                             }
                             placeholder="0"
                           />
                         ) : (
-                          <span>{formatCurrency(targetVal)}</span>
+                          <span>{formatCurrency(saasTarget)}</span>
                         )}
                       </td>
-                      <td className="px-4 py-3 text-right font-medium">{formatCurrency(closedVal)}</td>
+                      <td className="px-4 py-3 text-right font-medium">{formatCurrency(closed.saas)}</td>
                       <td className="px-4 py-3 text-right">
-                        <span
-                          className={
-                            attainment >= 100
-                              ? "text-green-600 font-semibold"
-                              : attainment >= 50
-                              ? "text-amber-600 font-medium"
-                              : "text-muted-foreground"
-                          }
-                        >
-                          {formatPercent(attainment)}
-                        </span>
+                        <span className={attColor(saasAtt)}>{formatPercent(saasAtt)}</span>
+                      </td>
+                      {/* Setup */}
+                      <td className="px-4 py-3 text-right">
+                        {canEdit ? (
+                          <Input
+                            type="number"
+                            min={0}
+                            step={100}
+                            className="w-32 ml-auto text-right"
+                            value={editSetup[u.user_id] ?? ""}
+                            onChange={(e) =>
+                              setEditSetup((prev) => ({ ...prev, [u.user_id]: e.target.value }))
+                            }
+                            placeholder="0"
+                          />
+                        ) : (
+                          <span>{formatCurrency(setupTarget)}</span>
+                        )}
+                      </td>
+                      <td className="px-4 py-3 text-right font-medium">{formatCurrency(closed.setup)}</td>
+                      <td className="px-4 py-3 text-right">
+                        <span className={attColor(setupAtt)}>{formatPercent(setupAtt)}</span>
                       </td>
                     </tr>
                   );
