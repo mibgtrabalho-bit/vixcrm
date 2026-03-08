@@ -183,12 +183,16 @@ export function DirectorDashboard({ filters }: DirectorDashboardProps) {
     }).sort((a, b) => b.closedVal - a.closedVal);
   }, [sellerScopeIds, allOpportunities, profileMap, start, end]);
 
-  // Stage map
+  // Stage map — dual revenue
   const stageMap = useMemo(() => {
-    const map: Record<string, { count: number; value: number }> = {};
-    PIPELINE_STAGES.forEach((s) => (map[s.id] = { count: 0, value: 0 }));
+    const map: Record<string, { count: number; saas: number; setup: number }> = {};
+    PIPELINE_STAGES.forEach((s) => (map[s.id] = { count: 0, saas: 0, setup: 0 }));
     allOpportunities.forEach((o: any) => {
-      if (map[o.stage]) { map[o.stage].count += 1; map[o.stage].value += Number(o.value) || 0; }
+      if (map[o.stage]) {
+        map[o.stage].count += 1;
+        map[o.stage].saas += Number(o.value_saas) || 0;
+        map[o.stage].setup += Number(o.value_implantacao) || 0;
+      }
     });
     return map;
   }, [allOpportunities]);
