@@ -6,7 +6,7 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 import Auth from "./pages/Auth";
 import Dashboard from "./pages/Dashboard";
-import Pipeline from "./pages/Pipeline";
+// Pipeline now redirects to /
 import Contacts from "./pages/Contacts";
 import Companies from "./pages/Companies";
 import Goals from "./pages/Goals";
@@ -62,7 +62,7 @@ function AppRoutes() {
     <Routes>
       <Route path="/auth" element={user && !new URLSearchParams(window.location.search).get("invite") ? <Navigate to="/" replace /> : <Auth />} />
       <Route path="/" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
-      <Route path="/pipeline" element={<ProtectedRoute><Pipeline /></ProtectedRoute>} />
+      <Route path="/pipeline" element={<Navigate to="/" replace />} />
       <Route path="/contacts" element={<ProtectedRoute><Contacts /></ProtectedRoute>} />
       <Route path="/companies" element={<ProtectedRoute><Companies /></ProtectedRoute>} />
       <Route path="/goals" element={<ManagerOrDirectorRoute><Goals /></ManagerOrDirectorRoute>} />
