@@ -65,8 +65,8 @@ function AppRoutes() {
       <Route path="/pipeline" element={<ProtectedRoute><Pipeline /></ProtectedRoute>} />
       <Route path="/contacts" element={<ProtectedRoute><Contacts /></ProtectedRoute>} />
       <Route path="/companies" element={<ProtectedRoute><Companies /></ProtectedRoute>} />
-      <Route path="/goals" element={<ProtectedRoute><Goals /></ProtectedRoute>} />
-      <Route path="/reports" element={<ProtectedRoute><Reports /></ProtectedRoute>} />
+      <Route path="/goals" element={<ManagerOrDirectorRoute><Goals /></ManagerOrDirectorRoute>} />
+      <Route path="/reports" element={<ManagerOrDirectorRoute><Reports /></ManagerOrDirectorRoute>} />
       <Route path="/settings" element={<ProtectedRoute><SettingsPage /></ProtectedRoute>} />
       <Route path="*" element={<NotFound />} />
     </Routes>
