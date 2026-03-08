@@ -300,7 +300,7 @@ export function AccessManagement() {
     if (error) {
       toast({ title: "Erro ao reenviar", description: error.message, variant: "destructive" });
     } else if (data) {
-      const link = `${window.location.origin}/auth?invite=${data.token}`;
+      const link = getInviteLink(data.token);
       navigator.clipboard.writeText(link);
       toast({ title: "Novo convite gerado e link copiado!" });
       fetchAll();
