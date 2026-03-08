@@ -111,9 +111,17 @@ export function AccessManagement() {
       .from("user_roles")
       .select("user_id, role");
 
+    // First get the current user's team IDs (for manager scoping)
+    const { data: myTeams } = await supabase
+      .from("team_members")
+      .select("team_id")
+      .eq("user_id", user?.id ?? "");
+
+    const myTeamIds = new Set((myTeams || []).map((t: any) => t.team_id));
+
     const { data: teamMembers } = await supabase
       .from("team_members")
-      .select("user_id, teams:team_id(name)");
+      .select("user_id, team_id, teams:team_id(name)");
 
     const { data: teamsData } = await supabase
       .from("teams")
