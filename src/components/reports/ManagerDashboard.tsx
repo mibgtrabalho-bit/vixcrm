@@ -61,21 +61,21 @@ export function ManagerDashboard({ filters }: ManagerDashboardProps) {
   const profileMap = teamData?.profileMap || {};
   const teamIds = teamData?.teamIds || [];
 
-  // 2. Opportunities — fetch all for team sellers, filter closing date client-side
+  // 2. Opportunities — fetch all for team members (not just sellers), filter closing date client-side
   const { data: allOpportunities = [] } = useQuery({
-    queryKey: ["mgr-dash-opps", sellers.join(","), filters.stage],
+    queryKey: ["mgr-dash-opps", allMemberIds.join(","), filters.stage],
     queryFn: async () => {
-      if (sellers.length === 0) return [];
+      if (allMemberIds.length === 0) return [];
       let q = supabase
         .from("opportunities")
         .select("id, title, value, value_saas, value_implantacao, stage, created_at, first_closed_at, updated_at, assigned_to, company_id, companies(name)")
-        .in("assigned_to", sellers);
+        .in("assigned_to", allMemberIds);
 
       if (filters.stage !== "all") q = q.eq("stage", filters.stage as any);
       const { data } = await q;
       return (data || []) as any[];
     },
-    enabled: sellers.length > 0,
+    enabled: allMemberIds.length > 0,
   });
 
   // 3. Team target
