@@ -53,6 +53,7 @@ import {
   UserCheck,
   UserX,
   Check,
+  Trash2,
 } from "lucide-react";
 
 interface TeamOption {
