@@ -105,8 +105,9 @@ export function TeamManagement() {
       ]);
 
     const roleMap = new Map((roles || []).map((r: any) => [r.user_id, r.role]));
+    const activeProfiles = (profiles || []).filter((p: any) => p.is_active !== false);
     const profileMap = new Map(
-      (profiles || []).map((p: any) => [p.user_id, { full_name: p.full_name, email: p.email }])
+      activeProfiles.map((p: any) => [p.user_id, { full_name: p.full_name, email: p.email }])
     );
 
     const teamMembersMap = new Map<string, MemberInfo[]>();
