@@ -2,6 +2,7 @@ import { useState, useCallback } from "react";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { StrategicSummary } from "@/components/home/StrategicSummary";
+import { PriorityBlock } from "@/components/home/PriorityBlock";
 import { KanbanBoard } from "@/components/pipeline/KanbanBoard";
 import { PipelineListView } from "@/components/pipeline/PipelineListView";
 import { CreateOpportunityDialog } from "@/components/pipeline/CreateOpportunityDialog";
