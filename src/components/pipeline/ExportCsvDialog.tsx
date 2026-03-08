@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/hooks/use-toast";
 import {
   Dialog,
   DialogContent,
@@ -10,7 +11,6 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Label } from "@/components/ui/label";
 import { Download, Users, User } from "lucide-react";
 import { PIPELINE_STAGES } from "@/lib/constants";
 
@@ -30,33 +30,56 @@ const STAGE_LABEL_MAP = Object.fromEntries(
   PIPELINE_STAGES.map((s) => [s.id, s.label])
 );
 
-const fmt = new Intl.NumberFormat("pt-BR", {
-  minimumFractionDigits: 2,
-  maximumFractionDigits: 2,
-});
+const ROLE_LABEL: Record<string, string> = {
+  vendedor: "Vendedor",
+  gestor: "Gestor",
+  diretor: "Diretor",
+};
 
-function formatDate(dateStr: string | null | undefined): string {
+function fmtDate(dateStr: string | null | undefined): string {
   if (!dateStr) return "";
   try {
     const d = new Date(dateStr);
-    return d.toLocaleDateString("pt-BR");
+    const dd = String(d.getDate()).padStart(2, "0");
+    const mm = String(d.getMonth() + 1).padStart(2, "0");
+    const yyyy = d.getFullYear();
+    return `${dd}/${mm}/${yyyy}`;
   } catch {
     return dateStr;
   }
 }
 
-function formatDateTime(dateStr: string | null | undefined): string {
+function fmtDateTime(dateStr: string | null | undefined): string {
   if (!dateStr) return "";
   try {
     const d = new Date(dateStr);
-    return `${d.toLocaleDateString("pt-BR")} ${d.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}`;
+    const dd = String(d.getDate()).padStart(2, "0");
+    const mm = String(d.getMonth() + 1).padStart(2, "0");
+    const yyyy = d.getFullYear();
+    const hh = String(d.getHours()).padStart(2, "0");
+    const mi = String(d.getMinutes()).padStart(2, "0");
+    return `${dd}/${mm}/${yyyy} ${hh}:${mi}`;
   } catch {
     return dateStr;
   }
+}
+
+function fmtNum(val: number | null | undefined): string {
+  if (val == null) return "";
+  return val.toFixed(2).replace(".", ",");
+}
+
+function escCsv(val: string): string {
+  if (!val) return "";
+  if (val.includes(";") || val.includes('"') || val.includes("\n") || val.includes("\r")) {
+    return `"${val.replace(/"/g, '""')}"`;
+  }
+  return val;
 }
 
 export function ExportCsvDialog({ open, onOpenChange, currentFilter }: ExportCsvDialogProps) {
   const { role, user } = useAuth();
+  const { toast } = useToast();
   const [teams, setTeams] = useState<TeamWithMembers[]>([]);
   const [selectedTeamIds, setSelectedTeamIds] = useState<Set<string>>(new Set());
   const [selectedUserIds, setSelectedUserIds] = useState<Set<string>>(new Set());
@@ -139,13 +162,12 @@ export function ExportCsvDialog({ open, onOpenChange, currentFilter }: ExportCsv
     setExporting(true);
 
     try {
-      // Build the list of user IDs to filter by
+      // Build filter user IDs
       let filterUserIds: string[] | null = null;
 
       if (role === "vendedor") {
         filterUserIds = user?.id ? [user.id] : [];
       } else if (useCurrentFilter && currentFilter && currentFilter !== "all") {
-        // Use the current pipeline filter
         if (currentFilter.startsWith("user:")) {
           filterUserIds = [currentFilter.slice(5)];
         } else {
@@ -155,7 +177,6 @@ export function ExportCsvDialog({ open, onOpenChange, currentFilter }: ExportCsv
         }
       } else if (!useCurrentFilter && (selectedTeamIds.size > 0 || selectedUserIds.size > 0)) {
         const ids = new Set<string>(selectedUserIds);
-        // Add users from selected teams
         for (const teamId of selectedTeamIds) {
           const team = teams.find((t) => t.id === teamId);
           if (team) team.members.forEach((m) => ids.add(m.user_id));
@@ -163,15 +184,15 @@ export function ExportCsvDialog({ open, onOpenChange, currentFilter }: ExportCsv
         filterUserIds = [...ids];
       }
 
-      // Query opportunities
+      // Query opportunities with full contact + company data
       let query = supabase
         .from("opportunities")
         .select(`
           id, title, value, value_implantacao, value_saas, stage,
-          expected_close_date, first_payment_date, notes, assigned_to,
+          expected_close_date, first_payment_date, notes, assigned_to, created_by,
           contact_id, company_id, created_at, updated_at,
-          contacts:contact_id(name),
-          companies:company_id(name)
+          contacts:contact_id(id, name, email, phone),
+          companies:company_id(id, name, cnpj, website, address)
         `)
         .is("deleted_at", null)
         .order("created_at", { ascending: false });
@@ -179,7 +200,7 @@ export function ExportCsvDialog({ open, onOpenChange, currentFilter }: ExportCsv
       if (filterUserIds !== null && filterUserIds.length > 0) {
         query = query.in("assigned_to", filterUserIds);
       } else if (filterUserIds !== null && filterUserIds.length === 0) {
-        // No users selected = nothing to export
+        toast({ title: "Nenhum registro encontrado", description: "Nenhuma oportunidade corresponde aos filtros selecionados." });
         setExporting(false);
         return;
       }
@@ -187,17 +208,30 @@ export function ExportCsvDialog({ open, onOpenChange, currentFilter }: ExportCsv
       const { data, error } = await query;
       if (error) throw error;
 
-      // Fetch profile names and team names for assigned_to
-      const assignedIds = [...new Set((data || []).map((o: any) => o.assigned_to).filter(Boolean))];
-      let profileMap = new Map<string, string>();
-      let teamNameMap = new Map<string, string>();
+      if (!data || data.length === 0) {
+        toast({ title: "Nenhum registro encontrado", description: "Nenhuma oportunidade corresponde aos filtros selecionados." });
+        setExporting(false);
+        return;
+      }
 
-      if (assignedIds.length > 0) {
-        const [{ data: profiles }, { data: tmData }] = await Promise.all([
-          supabase.from("profiles").select("user_id, full_name").in("user_id", assignedIds),
-          supabase.from("team_members").select("user_id, teams:team_id(name)").in("user_id", assignedIds),
+      // Collect all user IDs (assigned_to + created_by) for profile/role/team lookup
+      const allUserIds = [...new Set(
+        (data || []).flatMap((o: any) => [o.assigned_to, o.created_by].filter(Boolean))
+      )];
+
+      const profileMap = new Map<string, string>();
+      const roleMap = new Map<string, string>();
+      const teamNameMap = new Map<string, string>();
+
+      if (allUserIds.length > 0) {
+        const [{ data: profiles }, { data: roles }, { data: tmData }] = await Promise.all([
+          supabase.from("profiles").select("user_id, full_name").in("user_id", allUserIds),
+          supabase.from("user_roles").select("user_id, role").in("user_id", allUserIds),
+          supabase.from("team_members").select("user_id, teams:team_id(name)").in("user_id", allUserIds),
         ]);
+
         (profiles || []).forEach((p: any) => profileMap.set(p.user_id, p.full_name));
+        (roles || []).forEach((r: any) => roleMap.set(r.user_id, ROLE_LABEL[r.role] || r.role));
         (tmData || []).forEach((tm: any) => {
           if (!teamNameMap.has(tm.user_id) && tm.teams?.name) {
             teamNameMap.set(tm.user_id, tm.teams.name);
@@ -207,38 +241,61 @@ export function ExportCsvDialog({ open, onOpenChange, currentFilter }: ExportCsv
 
       // Build CSV
       const headers = [
-        "Oportunidade", "Etapa", "Responsável", "Time", "Contato", "Empresa",
-        "Valor SaaS Mensal", "Valor Implantação", "Valor Total",
-        "Fechamento Previsto", "Primeira Mensalidade", "Criado em", "Atualizado em", "Observações"
+        "ID da Oportunidade",
+        "Oportunidade",
+        "Etapa",
+        "Responsável",
+        "Cargo do Responsável",
+        "Time",
+        "ID do Contato",
+        "Contato",
+        "E-mail do Contato",
+        "Telefone do Contato",
+        "ID da Empresa",
+        "Empresa",
+        "CNPJ da Empresa",
+        "Website da Empresa",
+        "Endereço da Empresa",
+        "Valor SaaS Mensal",
+        "Valor Implantação",
+        "Valor Total",
+        "Fechamento Previsto",
+        "Primeira Mensalidade",
+        "Criado em",
+        "Atualizado em",
+        "Criado por",
+        "Observações",
       ];
 
-      const escCsv = (val: string) => {
-        if (val.includes(";") || val.includes('"') || val.includes("\n")) {
-          return `"${val.replace(/"/g, '""')}"`;
-        }
-        return val;
-      };
-
       const rows = (data || []).map((o: any) => [
+        escCsv(o.id || ""),
         escCsv(o.title || ""),
         escCsv(STAGE_LABEL_MAP[o.stage] || o.stage || ""),
         escCsv(profileMap.get(o.assigned_to) || ""),
+        escCsv(roleMap.get(o.assigned_to) || ""),
         escCsv(teamNameMap.get(o.assigned_to) || ""),
+        escCsv(o.contacts?.id || o.contact_id || ""),
         escCsv(o.contacts?.name || ""),
+        escCsv(o.contacts?.email || ""),
+        escCsv(o.contacts?.phone || ""),
+        escCsv(o.companies?.id || o.company_id || ""),
         escCsv(o.companies?.name || ""),
-        o.value_saas != null ? fmt.format(o.value_saas) : "",
-        o.value_implantacao != null ? fmt.format(o.value_implantacao) : "",
-        o.value != null ? fmt.format(o.value) : "",
-        formatDate(o.expected_close_date),
-        formatDate(o.first_payment_date),
-        formatDateTime(o.created_at),
-        formatDateTime(o.updated_at),
-        escCsv((o.notes || "").replace(/\n/g, " ")),
+        escCsv(o.companies?.cnpj || ""),
+        escCsv(o.companies?.website || ""),
+        escCsv(o.companies?.address || ""),
+        fmtNum(o.value_saas),
+        fmtNum(o.value_implantacao),
+        fmtNum(o.value),
+        fmtDate(o.expected_close_date),
+        fmtDate(o.first_payment_date),
+        fmtDateTime(o.created_at),
+        fmtDateTime(o.updated_at),
+        escCsv(profileMap.get(o.created_by) || ""),
+        escCsv((o.notes || "").replace(/[\r\n]+/g, " ")),
       ].join(";"));
 
       const csvContent = "\uFEFF" + [headers.join(";"), ...rows].join("\r\n");
 
-      // Download
       const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
@@ -250,15 +307,17 @@ export function ExportCsvDialog({ open, onOpenChange, currentFilter }: ExportCsv
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
 
+      toast({ title: "Exportação concluída", description: `${data.length} oportunidade(s) exportada(s).` });
       onOpenChange(false);
     } catch (err: any) {
       console.error("Export error:", err);
+      toast({ title: "Erro na exportação", description: err.message || "Tente novamente.", variant: "destructive" });
     } finally {
       setExporting(false);
     }
   };
 
-  // Seller: direct export, no dialog needed
+  // Seller: direct export
   if (role === "vendedor") {
     if (open) {
       handleExport(false);
@@ -278,7 +337,6 @@ export function ExportCsvDialog({ open, onOpenChange, currentFilter }: ExportCsv
         </DialogHeader>
 
         <div className="space-y-4 pt-2">
-          {/* Quick actions */}
           <div className="flex flex-col gap-2">
             <Button
               variant="outline"
@@ -304,7 +362,6 @@ export function ExportCsvDialog({ open, onOpenChange, currentFilter }: ExportCsv
             </Button>
           </div>
 
-          {/* Team/user selection */}
           {!loading && teams.length > 0 && (
             <div className="space-y-2">
               <p className="text-sm font-medium text-muted-foreground">Ou selecione times/usuários:</p>
