@@ -10,6 +10,7 @@ export interface Opportunity {
   company_name?: string;
   contact_name?: string;
   assigned_to_name?: string;
+  team_name?: string;
   expected_close_date?: string;
   stage: string;
   notes?: string;
