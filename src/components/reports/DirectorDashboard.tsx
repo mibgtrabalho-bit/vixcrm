@@ -132,8 +132,8 @@ export function DirectorDashboard({ filters }: DirectorDashboardProps) {
   const closedSetup = closed.reduce((s: number, o: any) => s + (Number(o.value_implantacao) || 0), 0);
   const pipelineTotal = pipeline.reduce((s: number, o: any) => s + (Number(o.value) || 0), 0);
 
-  const tSaas = (teamTargets || []).reduce((s: number, t: any) => s + (Number(t.target_saas) || 0), 0);
-  const tSetup = (teamTargets || []).reduce((s: number, t: any) => s + (Number(t.target_setup) || 0), 0);
+  const tSaas = resolvedTargets?.saas ?? 0;
+  const tSetup = resolvedTargets?.setup ?? 0;
   const pctSaas = tSaas > 0 ? Math.min((closedSaas / tSaas) * 100, 100) : 0;
   const pctSetup = tSetup > 0 ? Math.min((closedSetup / tSetup) * 100, 100) : 0;
 
