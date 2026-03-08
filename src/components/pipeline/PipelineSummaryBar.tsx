@@ -3,16 +3,8 @@ import { Card, CardContent } from "@/components/ui/card";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { parsePipelineFilter } from "./PipelineTeamFilter";
+import { formatCurrency } from "@/lib/metrics";
 import { Target, TrendingUp } from "lucide-react";
-
-function formatCurrency(val: number): string {
-  return new Intl.NumberFormat("pt-BR", {
-    style: "currency",
-    currency: "BRL",
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 0,
-  }).format(val);
-}
 
 function getMonthStart(): string {
   const now = new Date();

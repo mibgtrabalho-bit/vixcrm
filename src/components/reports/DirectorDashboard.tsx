@@ -3,6 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { PIPELINE_STAGES } from "@/lib/constants";
+import { formatCurrency, getPeriodRange, isClosedInPeriod, sumField } from "@/lib/metrics";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import {
@@ -15,31 +16,6 @@ import {
 
 interface DirectorDashboardProps {
   filters: { period: string; stage: string; team: string };
-}
-
-function fmt(val: number) {
-  return new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL", minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(val);
-}
-
-function getPeriodRange(period: string) {
-  const now = new Date();
-  const y = now.getFullYear();
-  const m = now.getMonth();
-  let start: Date, end: Date;
-  switch (period) {
-    case "last_month":
-      start = new Date(y, m - 1, 1); end = new Date(y, m, 0, 23, 59, 59); break;
-    case "current_quarter": {
-      const q = Math.floor(m / 3) * 3;
-      start = new Date(y, q, 1); end = new Date(y, q + 3, 0, 23, 59, 59); break;
-    }
-    case "current_year":
-      start = new Date(y, 0, 1); end = new Date(y, 11, 31, 23, 59, 59); break;
-    default:
-      start = new Date(y, m, 1); end = new Date(y, m + 1, 0, 23, 59, 59);
-  }
-  const monthStr = `${start.getFullYear()}-${String(start.getMonth() + 1).padStart(2, "0")}-01`;
-  return { start, end, monthStr };
 }
 
 export function DirectorDashboard({ filters }: DirectorDashboardProps) {
@@ -77,17 +53,15 @@ export function DirectorDashboard({ filters }: DirectorDashboardProps) {
     return members.filter((m: any) => m.team_id === teamId).map((m: any) => m.user_id).filter((id: string) => sellerIds.includes(id));
   }, [filters.team, sellerIds, members]);
 
-  // 2. Opportunities
-  const { data: opportunities = [] } = useQuery({
-    queryKey: ["dir-dash-opps", scopeUserIds.join(","), filters.period, filters.stage],
+  // 2. Opportunities — fetch all for scope, filter closing date client-side
+  const { data: allOpportunities = [] } = useQuery({
+    queryKey: ["dir-dash-opps", scopeUserIds.join(","), filters.stage],
     queryFn: async () => {
       if (scopeUserIds.length === 0) return [];
       let q = supabase
         .from("opportunities")
-        .select("id, title, value, value_saas, value_implantacao, stage, created_at, first_closed_at, assigned_to, company_id")
-        .in("assigned_to", scopeUserIds)
-        .gte("created_at", start.toISOString())
-        .lte("created_at", end.toISOString());
+        .select("id, title, value, value_saas, value_implantacao, stage, created_at, first_closed_at, updated_at, assigned_to, company_id")
+        .in("assigned_to", scopeUserIds);
       if (filters.stage !== "all") q = q.eq("stage", filters.stage as any);
       const { data } = await q;
       return (data || []) as any[];
@@ -100,7 +74,6 @@ export function DirectorDashboard({ filters }: DirectorDashboardProps) {
     queryKey: ["dir-dash-targets", filters.team, monthStr],
     queryFn: async () => {
       if (filters.team.startsWith("user:")) {
-        // Single seller → use their monthly_targets (same source as SellerDashboard)
         const userId = filters.team.slice(5);
         const { data } = await supabase
           .from("monthly_targets")
@@ -110,7 +83,6 @@ export function DirectorDashboard({ filters }: DirectorDashboardProps) {
           .maybeSingle();
         return { saas: Number(data?.target_saas) || 0, setup: Number(data?.target_setup) || 0 };
       }
-      // Team or all → use team_targets
       let q = supabase.from("team_targets").select("team_id, target_saas, target_setup").eq("month", monthStr);
       if (filters.team !== "all") {
         const teamId = filters.team.startsWith("team:") ? filters.team.slice(5) : filters.team;
@@ -124,20 +96,26 @@ export function DirectorDashboard({ filters }: DirectorDashboardProps) {
     enabled: !!profile?.tenant_id,
   });
 
-  // Derived
-  const closed = useMemo(() => opportunities.filter((o: any) => o.stage === "fechado"), [opportunities]);
-  const pipeline = useMemo(() => opportunities.filter((o: any) => o.stage !== "fechado" && o.stage !== "perdido"), [opportunities]);
+  // Derived — uses canonical closing date via isClosedInPeriod
+  const closed = useMemo(
+    () => allOpportunities.filter((o: any) => o.stage === "fechado" && isClosedInPeriod(o, start, end)),
+    [allOpportunities, start, end],
+  );
+  const pipeline = useMemo(
+    () => allOpportunities.filter((o: any) => o.stage !== "fechado" && o.stage !== "perdido"),
+    [allOpportunities],
+  );
 
-  const closedSaas = closed.reduce((s: number, o: any) => s + (Number(o.value_saas) || 0), 0);
-  const closedSetup = closed.reduce((s: number, o: any) => s + (Number(o.value_implantacao) || 0), 0);
-  const pipelineTotal = pipeline.reduce((s: number, o: any) => s + (Number(o.value) || 0), 0);
+  const closedSaas = sumField(closed, "value_saas");
+  const closedSetup = sumField(closed, "value_implantacao");
+  const pipelineTotal = sumField(pipeline, "value");
 
   const tSaas = resolvedTargets?.saas ?? 0;
   const tSetup = resolvedTargets?.setup ?? 0;
   const pctSaas = tSaas > 0 ? Math.min((closedSaas / tSaas) * 100, 100) : 0;
   const pctSetup = tSetup > 0 ? Math.min((closedSetup / tSetup) * 100, 100) : 0;
 
-  const totalOpps = opportunities.length;
+  const totalOpps = allOpportunities.length;
   const closedCount = closed.length;
   const conversion = totalOpps > 0 ? (closedCount / totalOpps) * 100 : 0;
 
@@ -152,7 +130,7 @@ export function DirectorDashboard({ filters }: DirectorDashboardProps) {
   const monthlyRevenue = useMemo(() => {
     const map: Record<string, { month: string; saas: number; setup: number }> = {};
     closed.forEach((o: any) => {
-      const d = new Date(o.first_closed_at || o.created_at);
+      const d = new Date(o.first_closed_at || o.updated_at);
       const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
       if (!map[key]) map[key] = { month: key, saas: 0, setup: 0 };
       map[key].saas += Number(o.value_saas) || 0;
@@ -181,25 +159,25 @@ export function DirectorDashboard({ filters }: DirectorDashboardProps) {
   // Seller ranking
   const sellerRanking = useMemo(() => {
     return scopeUserIds.map((uid) => {
-      const so = opportunities.filter((o: any) => o.assigned_to === uid);
-      const sc = so.filter((o: any) => o.stage === "fechado");
+      const so = allOpportunities.filter((o: any) => o.assigned_to === uid);
+      const sc = so.filter((o: any) => o.stage === "fechado" && isClosedInPeriod(o, start, end));
       const sp = so.filter((o: any) => o.stage !== "fechado" && o.stage !== "perdido");
-      const closedVal = sc.reduce((s: number, o: any) => s + (Number(o.value) || 0), 0);
-      const pipelineVal = sp.reduce((s: number, o: any) => s + (Number(o.value) || 0), 0);
+      const closedVal = sumField(sc, "value");
+      const pipelineVal = sumField(sp, "value");
       const conv = so.length > 0 ? (sc.length / so.length) * 100 : 0;
       return { userId: uid, name: profileMap[uid] || "—", opps: so.length, closedVal, pipelineVal, closedCount: sc.length, conversion: conv, avgTicket: sc.length > 0 ? closedVal / sc.length : 0 };
     }).sort((a, b) => b.closedVal - a.closedVal);
-  }, [scopeUserIds, opportunities, profileMap]);
+  }, [scopeUserIds, allOpportunities, profileMap, start, end]);
 
   // Stage map
   const stageMap = useMemo(() => {
     const map: Record<string, { count: number; value: number }> = {};
     PIPELINE_STAGES.forEach((s) => (map[s.id] = { count: 0, value: 0 }));
-    opportunities.forEach((o: any) => {
+    allOpportunities.forEach((o: any) => {
       if (map[o.stage]) { map[o.stage].count += 1; map[o.stage].value += Number(o.value) || 0; }
     });
     return map;
-  }, [opportunities]);
+  }, [allOpportunities]);
 
   return (
     <div className="space-y-6">
@@ -211,9 +189,9 @@ export function DirectorDashboard({ filters }: DirectorDashboardProps) {
             <Target className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent className="space-y-2">
-            <p className="text-2xl font-bold">{fmt(tSaas)}</p>
+            <p className="text-2xl font-bold">{formatCurrency(tSaas)}</p>
             <div className="flex items-center justify-between text-xs text-muted-foreground">
-              <span>Realizado: {fmt(closedSaas)}</span><span>{pctSaas.toFixed(0)}%</span>
+              <span>Realizado: {formatCurrency(closedSaas)}</span><span>{pctSaas.toFixed(0)}%</span>
             </div>
             <Progress value={pctSaas} className="h-1.5" />
           </CardContent>
@@ -224,9 +202,9 @@ export function DirectorDashboard({ filters }: DirectorDashboardProps) {
             <Target className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent className="space-y-2">
-            <p className="text-2xl font-bold">{fmt(tSetup)}</p>
+            <p className="text-2xl font-bold">{formatCurrency(tSetup)}</p>
             <div className="flex items-center justify-between text-xs text-muted-foreground">
-              <span>Realizado: {fmt(closedSetup)}</span><span>{pctSetup.toFixed(0)}%</span>
+              <span>Realizado: {formatCurrency(closedSetup)}</span><span>{pctSetup.toFixed(0)}%</span>
             </div>
             <Progress value={pctSetup} className="h-1.5" />
           </CardContent>
@@ -238,7 +216,7 @@ export function DirectorDashboard({ filters }: DirectorDashboardProps) {
           </CardHeader>
           <CardContent>
             <p className="text-2xl font-bold">{conversion.toFixed(1).replace(".", ",")}%</p>
-            <p className="text-xs text-muted-foreground mt-1">{closedCount}/{totalOpps} opps · Pipeline: {fmt(pipelineTotal)}</p>
+            <p className="text-xs text-muted-foreground mt-1">{closedCount}/{totalOpps} opps · Pipeline: {formatCurrency(pipelineTotal)}</p>
           </CardContent>
         </Card>
         <Card>
@@ -268,7 +246,7 @@ export function DirectorDashboard({ filters }: DirectorDashboardProps) {
                 <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
                 <XAxis dataKey="month" tick={{ fontSize: 12 }} className="fill-muted-foreground" />
                 <YAxis tick={{ fontSize: 12 }} className="fill-muted-foreground" tickFormatter={(v) => `${(v / 1000).toFixed(0)}k`} />
-                <Tooltip formatter={(v: number) => fmt(v)} />
+                <Tooltip formatter={(v: number) => formatCurrency(v)} />
                 <Bar dataKey="saas" name="SaaS" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} />
                 <Bar dataKey="setup" name="Setup" fill="hsl(var(--muted-foreground))" radius={[4, 4, 0, 0]} />
               </BarChart>
@@ -291,7 +269,7 @@ export function DirectorDashboard({ filters }: DirectorDashboardProps) {
               <div key={s.id} className="rounded-lg border border-border/60 p-3 text-center">
                 <p className="text-xs text-muted-foreground truncate">{s.label}</p>
                 <p className="text-lg font-bold mt-1">{stageMap[s.id]?.count ?? 0}</p>
-                <p className="text-xs text-muted-foreground">{fmt(stageMap[s.id]?.value ?? 0)}</p>
+                <p className="text-xs text-muted-foreground">{formatCurrency(stageMap[s.id]?.value ?? 0)}</p>
               </div>
             ))}
           </div>
@@ -322,9 +300,9 @@ export function DirectorDashboard({ filters }: DirectorDashboardProps) {
                   {teamRevenue.map((t) => (
                     <TableRow key={t.name}>
                       <TableCell className="font-medium text-sm">{t.name}</TableCell>
-                      <TableCell className="text-sm text-right">{fmt(t.closed)}</TableCell>
+                      <TableCell className="text-sm text-right">{formatCurrency(t.closed)}</TableCell>
                       <TableCell className="text-sm text-right">{t.count}</TableCell>
-                      <TableCell className="text-sm text-right">{fmt(t.count > 0 ? t.closed / t.count : 0)}</TableCell>
+                      <TableCell className="text-sm text-right">{formatCurrency(t.count > 0 ? t.closed / t.count : 0)}</TableCell>
                     </TableRow>
                   ))}
                 </TableBody>
@@ -365,10 +343,10 @@ export function DirectorDashboard({ filters }: DirectorDashboardProps) {
                       <TableCell className="text-sm text-muted-foreground">{i + 1}</TableCell>
                       <TableCell className="text-sm font-medium">{s.name}</TableCell>
                       <TableCell className="text-sm text-right">{s.opps}</TableCell>
-                      <TableCell className="text-sm text-right">{fmt(s.pipelineVal)}</TableCell>
-                      <TableCell className="text-sm text-right">{fmt(s.closedVal)}</TableCell>
+                      <TableCell className="text-sm text-right">{formatCurrency(s.pipelineVal)}</TableCell>
+                      <TableCell className="text-sm text-right">{formatCurrency(s.closedVal)}</TableCell>
                       <TableCell className="text-sm text-right">{s.conversion.toFixed(1).replace(".", ",")}%</TableCell>
-                      <TableCell className="text-sm text-right">{fmt(s.avgTicket)}</TableCell>
+                      <TableCell className="text-sm text-right">{formatCurrency(s.avgTicket)}</TableCell>
                     </TableRow>
                   ))}
                 </TableBody>
