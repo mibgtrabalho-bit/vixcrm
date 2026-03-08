@@ -182,6 +182,7 @@ export function AccessManagement() {
         status: inv.status,
         token: inv.token,
         created_at: inv.created_at,
+        team_id: inv.team_id || null,
         team_name: (inv.teams as any)?.name || null,
       }))
     );
