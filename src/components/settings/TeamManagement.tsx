@@ -100,13 +100,14 @@ export function TeamManagement() {
       await Promise.all([
         supabase.from("teams").select("id, name, created_at").order("name"),
         supabase.from("team_members").select("id, team_id, user_id"),
-        supabase.from("profiles").select("user_id, full_name, email"),
+        supabase.from("profiles").select("user_id, full_name, email, is_active"),
         supabase.from("user_roles").select("user_id, role"),
       ]);
 
     const roleMap = new Map((roles || []).map((r: any) => [r.user_id, r.role]));
+    const activeProfiles = (profiles || []).filter((p: any) => p.is_active !== false);
     const profileMap = new Map(
-      (profiles || []).map((p: any) => [p.user_id, { full_name: p.full_name, email: p.email }])
+      activeProfiles.map((p: any) => [p.user_id, { full_name: p.full_name, email: p.email }])
     );
 
     const teamMembersMap = new Map<string, MemberInfo[]>();
@@ -152,7 +153,7 @@ export function TeamManagement() {
 
     // Unassigned: non-director users without any team membership (director only sees this)
     if (isDirector) {
-      const unassignedUsers: UnassignedUser[] = (profiles || [])
+      const unassignedUsers: UnassignedUser[] = activeProfiles
         .filter((p: any) => {
           const r = roleMap.get(p.user_id);
           return r !== "diretor" && !assignedUserIds.has(p.user_id);
