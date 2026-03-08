@@ -80,6 +80,13 @@ interface InvitationRow {
   team_name: string | null;
 }
 
+// Always use the published URL for invite links so end users never hit
+// the Lovable preview URL (which requires workspace auth).
+const PUBLISHED_ORIGIN = "https://vixcrm.lovable.app";
+
+const getInviteLink = (token: string) =>
+  `${PUBLISHED_ORIGIN}/auth?invite=${token}`;
+
 export function AccessManagement() {
   const { user, profile, role } = useAuth();
   const { toast } = useToast();
@@ -240,7 +247,7 @@ export function AccessManagement() {
     if (error) {
       toast({ title: "Erro ao convidar", description: error.message, variant: "destructive" });
     } else {
-      const link = `${window.location.origin}/auth?invite=${data.token}`;
+      const link = getInviteLink(data.token);
       setGeneratedLink(link);
       toast({ title: "Convite criado!" });
       fetchAll();
@@ -249,7 +256,7 @@ export function AccessManagement() {
   };
 
   const copyLink = (token: string) => {
-    const link = `${window.location.origin}/auth?invite=${token}`;
+    const link = getInviteLink(token);
     navigator.clipboard.writeText(link);
     setCopiedToken(token);
     toast({ title: "Link copiado!" });
@@ -293,7 +300,7 @@ export function AccessManagement() {
     if (error) {
       toast({ title: "Erro ao reenviar", description: error.message, variant: "destructive" });
     } else if (data) {
-      const link = `${window.location.origin}/auth?invite=${data.token}`;
+      const link = getInviteLink(data.token);
       navigator.clipboard.writeText(link);
       toast({ title: "Novo convite gerado e link copiado!" });
       fetchAll();
