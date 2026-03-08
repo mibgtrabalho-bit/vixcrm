@@ -10,6 +10,7 @@ import Pipeline from "./pages/Pipeline";
 import Contacts from "./pages/Contacts";
 import Companies from "./pages/Companies";
 import Goals from "./pages/Goals";
+import Reports from "./pages/Reports";
 import SettingsPage from "./pages/SettingsPage";
 import NotFound from "./pages/NotFound";
 
@@ -49,6 +50,7 @@ function AppRoutes() {
       <Route path="/contacts" element={<ProtectedRoute><Contacts /></ProtectedRoute>} />
       <Route path="/companies" element={<ProtectedRoute><Companies /></ProtectedRoute>} />
       <Route path="/goals" element={<ProtectedRoute><Goals /></ProtectedRoute>} />
+      <Route path="/reports" element={<ProtectedRoute><Reports /></ProtectedRoute>} />
       <Route path="/settings" element={<ProtectedRoute><SettingsPage /></ProtectedRoute>} />
       <Route path="*" element={<NotFound />} />
     </Routes>
