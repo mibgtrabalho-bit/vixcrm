@@ -92,14 +92,15 @@ export function KanbanBoard({ teamFilter = "all" }: KanbanBoardProps) {
       .select(`
         id, title, value, value_implantacao, value_saas, stage, expected_close_date, notes, assigned_to, contact_id, company_id, first_payment_date,
         contacts:contact_id(name),
-        companies:company_id(name)
+        companies:company_id(name),
+        profiles:assigned_to(full_name),
+        team_members:assigned_to(team_id, teams:team_id(name))
       `)
       .order("created_at", { ascending: true });
 
     // Server-side team filter
     if (teamMemberIds !== null) {
       if (teamMemberIds.length === 0) {
-        // No members in team = no results
         setOpportunities([]);
         setLoading(false);
         return;
@@ -115,22 +116,30 @@ export function KanbanBoard({ teamFilter = "all" }: KanbanBoardProps) {
       return;
     }
 
-    const mapped: Opportunity[] = (data || []).map((o: any) => ({
-      id: o.id,
-      title: o.title,
-      value: o.value,
-      value_implantacao: o.value_implantacao,
-      value_saas: o.value_saas,
-      stage: o.stage,
-      company_name: o.companies?.name,
-      contact_name: o.contacts?.name,
-      expected_close_date: o.expected_close_date,
-      notes: o.notes,
-      contact_id: o.contact_id,
-      company_id: o.company_id,
-      assigned_to: o.assigned_to,
-      first_payment_date: o.first_payment_date,
-    }));
+    const mapped: Opportunity[] = (data || []).map((o: any) => {
+      // team_members is an array since user can be in multiple teams; take first
+      const teamArr = Array.isArray(o.team_members) ? o.team_members : o.team_members ? [o.team_members] : [];
+      const teamName = teamArr[0]?.teams?.name || null;
+
+      return {
+        id: o.id,
+        title: o.title,
+        value: o.value,
+        value_implantacao: o.value_implantacao,
+        value_saas: o.value_saas,
+        stage: o.stage,
+        company_name: o.companies?.name,
+        contact_name: o.contacts?.name,
+        assigned_to_name: o.profiles?.full_name || null,
+        team_name: teamName,
+        expected_close_date: o.expected_close_date,
+        notes: o.notes,
+        contact_id: o.contact_id,
+        company_id: o.company_id,
+        assigned_to: o.assigned_to,
+        first_payment_date: o.first_payment_date,
+      };
+    });
 
     setOpportunities(mapped);
     setLoading(false);
