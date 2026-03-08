@@ -1,9 +1,9 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useQuery } from "@tanstack/react-query";
 import { formatCurrency } from "@/lib/metrics";
-import { ChevronDown, DollarSign, TrendingUp, Target, BarChart3 } from "lucide-react";
+import { ChevronDown, DollarSign, TrendingUp, Target, BarChart3, Hash, Percent } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface StrategicSummaryProps {
@@ -19,14 +19,31 @@ async function resolveFilterUserIds(filterValue: string): Promise<string[] | nul
   return ids.length > 0 ? ids : [];
 }
 
-async function fetchStats(filterUserIds: string[] | null) {
-  const empty = { vendas_realizadas: 0, vendas_projetadas: 0, pipeline_saas: 0, pipeline_setup: 0 };
+interface Stats {
+  vendas_realizadas: number;
+  vendas_projetadas: number;
+  pipeline_saas: number;
+  pipeline_setup: number;
+  total_opps: number;
+  conversao: number;
+}
+
+const EMPTY_STATS: Stats = {
+  vendas_realizadas: 0,
+  vendas_projetadas: 0,
+  pipeline_saas: 0,
+  pipeline_setup: 0,
+  total_opps: 0,
+  conversao: 0,
+};
+
+async function fetchStats(filterUserIds: string[] | null): Promise<Stats> {
   let query = supabase
     .from("opportunities")
     .select("id, value, value_implantacao, value_saas, stage");
 
   if (filterUserIds !== null) {
-    if (filterUserIds.length === 0) return empty;
+    if (filterUserIds.length === 0) return EMPTY_STATS;
     query = query.in("assigned_to", filterUserIds);
   }
 
@@ -41,16 +58,78 @@ async function fetchStats(filterUserIds: string[] | null) {
   const pipelineSaas = pipeline.reduce((s, o) => s + (Number(o.value_saas) || 0), 0);
   const pipelineSetup = pipeline.reduce((s, o) => s + (Number(o.value_implantacao) || 0), 0);
 
-  return { vendas_realizadas: vendasRealizadas, vendas_projetadas: vendasProjetadas, pipeline_saas: pipelineSaas, pipeline_setup: pipelineSetup };
+  const total = opportunities.length;
+  const conversao = total > 0 ? (fechados.length / total) * 100 : 0;
+
+  return {
+    vendas_realizadas: vendasRealizadas,
+    vendas_projetadas: vendasProjetadas,
+    pipeline_saas: pipelineSaas,
+    pipeline_setup: pipelineSetup,
+    total_opps: total,
+    conversao,
+  };
+}
+
+interface KpiItem {
+  label: string;
+  value: string;
+  icon: React.ElementType;
+  color: string;
+}
+
+function buildKpis(role: string | null, values: Stats): KpiItem[] {
+  if (role === "vendedor") {
+    return [
+      { label: "Minhas Vendas", value: formatCurrency(values.vendas_realizadas), icon: DollarSign, color: "text-emerald-600" },
+      { label: "Meu Pipeline", value: formatCurrency(values.vendas_projetadas), icon: TrendingUp, color: "text-blue-600" },
+      { label: "Setup", value: formatCurrency(values.pipeline_setup), icon: Target, color: "text-violet-600" },
+      { label: "SaaS", value: formatCurrency(values.pipeline_saas), icon: BarChart3, color: "text-amber-600" },
+    ];
+  }
+
+  if (role === "gestor") {
+    return [
+      { label: "Vendas do Time", value: formatCurrency(values.vendas_realizadas), icon: DollarSign, color: "text-emerald-600" },
+      { label: "Pipeline", value: formatCurrency(values.vendas_projetadas), icon: TrendingUp, color: "text-blue-600" },
+      { label: "Setup", value: formatCurrency(values.pipeline_setup), icon: Target, color: "text-violet-600" },
+      { label: "SaaS", value: formatCurrency(values.pipeline_saas), icon: BarChart3, color: "text-amber-600" },
+    ];
+  }
+
+  // Director: 6 KPIs with executive extras
+  return [
+    { label: "Vendas Realizadas", value: formatCurrency(values.vendas_realizadas), icon: DollarSign, color: "text-emerald-600" },
+    { label: "Projetado", value: formatCurrency(values.vendas_projetadas), icon: TrendingUp, color: "text-blue-600" },
+    { label: "Pipeline Setup", value: formatCurrency(values.pipeline_setup), icon: Target, color: "text-violet-600" },
+    { label: "Pipeline SaaS", value: formatCurrency(values.pipeline_saas), icon: BarChart3, color: "text-amber-600" },
+    { label: "Oportunidades", value: String(values.total_opps), icon: Hash, color: "text-sky-600" },
+    { label: "Conversão", value: `${values.conversao.toFixed(1).replace(".", ",")}%`, icon: Percent, color: "text-rose-600" },
+  ];
+}
+
+function getSummaryLabel(role: string | null): string {
+  if (role === "vendedor") return "Meu Resumo";
+  if (role === "gestor") return "Resumo do Time";
+  return "Resumo Estratégico";
 }
 
 export function StrategicSummary({ teamFilter }: StrategicSummaryProps) {
-  const { profile } = useAuth();
-  const [expanded, setExpanded] = useState(true);
+  const { profile, role, user } = useAuth();
+
+  // Sellers start collapsed for a leaner operational feel
+  const [expanded, setExpanded] = useState(() => role !== "vendedor");
   const [filterUserIds, setFilterUserIds] = useState<string[] | null>(null);
   const [filterResolved, setFilterResolved] = useState(false);
 
+  // Seller always scoped to self
   useEffect(() => {
+    if (role === "vendedor" && user?.id) {
+      setFilterUserIds([user.id]);
+      setFilterResolved(true);
+      return;
+    }
+
     let cancelled = false;
     setFilterResolved(false);
     resolveFilterUserIds(teamFilter).then((ids) => {
@@ -60,22 +139,23 @@ export function StrategicSummary({ teamFilter }: StrategicSummaryProps) {
       }
     });
     return () => { cancelled = true; };
-  }, [teamFilter]);
+  }, [teamFilter, role, user?.id]);
 
   const { data: values } = useQuery({
-    queryKey: ["home-strategic-stats", filterUserIds],
+    queryKey: ["home-strategic-stats", filterUserIds, role],
     queryFn: () => fetchStats(filterUserIds),
     enabled: !!profile?.tenant_id && filterResolved,
     staleTime: 30_000,
-    initialData: { vendas_realizadas: 0, vendas_projetadas: 0, pipeline_saas: 0, pipeline_setup: 0 },
+    initialData: EMPTY_STATS,
   });
 
-  const kpis = [
-    { label: "Vendas Realizadas", value: formatCurrency(values.vendas_realizadas), icon: DollarSign, color: "text-emerald-600" },
-    { label: "Projetado", value: formatCurrency(values.vendas_projetadas), icon: TrendingUp, color: "text-blue-600" },
-    { label: "Pipeline Setup", value: formatCurrency(values.pipeline_setup), icon: Target, color: "text-violet-600" },
-    { label: "Pipeline SaaS", value: formatCurrency(values.pipeline_saas), icon: BarChart3, color: "text-amber-600" },
-  ];
+  const kpis = buildKpis(role, values);
+  const summaryLabel = getSummaryLabel(role);
+
+  // Director uses 6-col grid, others use 4-col
+  const gridCols = role === "diretor"
+    ? "grid-cols-2 md:grid-cols-3 lg:grid-cols-6"
+    : "grid-cols-2 md:grid-cols-4";
 
   return (
     <div className="border-b border-border/60">
@@ -85,12 +165,12 @@ export function StrategicSummary({ teamFilter }: StrategicSummaryProps) {
         className="flex w-full items-center gap-2 px-6 py-2.5 text-xs font-medium text-muted-foreground hover:bg-muted/30 transition-colors"
       >
         <ChevronDown className={cn("h-3.5 w-3.5 transition-transform", !expanded && "-rotate-90")} />
-        <span>Resumo Estratégico</span>
+        <span>{summaryLabel}</span>
         {/* Collapsed inline KPIs */}
         {!expanded && (
-          <div className="ml-4 flex items-center gap-6 text-xs">
+          <div className="ml-4 flex items-center gap-6 text-xs overflow-x-auto">
             {kpis.map((k) => (
-              <span key={k.label} className="flex items-center gap-1">
+              <span key={k.label} className="flex items-center gap-1 whitespace-nowrap">
                 <span className="text-muted-foreground">{k.label}:</span>
                 <span className="font-semibold text-foreground">{k.value}</span>
               </span>
@@ -101,7 +181,7 @@ export function StrategicSummary({ teamFilter }: StrategicSummaryProps) {
 
       {/* Expanded cards */}
       {expanded && (
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 px-6 pb-4">
+        <div className={cn("grid gap-3 px-6 pb-4", gridCols)}>
           {kpis.map((kpi) => (
             <div
               key={kpi.label}

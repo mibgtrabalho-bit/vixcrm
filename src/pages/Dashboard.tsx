@@ -8,9 +8,17 @@ import { CreateOpportunityDialog } from "@/components/pipeline/CreateOpportunity
 import { PipelineTeamFilter } from "@/components/pipeline/PipelineTeamFilter";
 import { ExportCsvDialog } from "@/components/pipeline/ExportCsvDialog";
 import { Button } from "@/components/ui/button";
+import { useAuth } from "@/contexts/AuthContext";
 import { Plus, LayoutGrid, List, Download } from "lucide-react";
 
+function getHeaderDescription(role: string | null): string {
+  if (role === "vendedor") return "Suas oportunidades de venda";
+  if (role === "gestor") return "Pipeline do seu time";
+  return "Visão operacional e estratégica";
+}
+
 export default function Dashboard() {
+  const { role } = useAuth();
   const [createOpen, setCreateOpen] = useState(false);
   const [exportOpen, setExportOpen] = useState(false);
   const [viewMode, setViewMode] = useState<"kanban" | "list">("kanban");
@@ -23,7 +31,7 @@ export default function Dashboard() {
 
   return (
     <AppLayout>
-      <PageHeader title="Pipeline" description="Gerencie suas oportunidades de venda">
+      <PageHeader title="Pipeline" description={getHeaderDescription(role)}>
         <PipelineTeamFilter value={teamFilter} onChange={setTeamFilter} />
         <div className="flex items-center gap-0.5 rounded-lg border border-border/60 bg-muted/50 p-0.5">
           <button
