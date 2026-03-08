@@ -1,5 +1,5 @@
 import { Draggable } from "@hello-pangea/dnd";
-import { Building2, DollarSign, Calendar, User, Users } from "lucide-react";
+import { Building2, DollarSign, Calendar, User, Users, Clock } from "lucide-react";
 
 export interface Opportunity {
   id: string;
@@ -18,6 +18,8 @@ export interface Opportunity {
   company_id?: string;
   assigned_to?: string;
   first_payment_date?: string;
+  created_at?: string;
+  last_activity_at?: string;
 }
 
 interface Props {
