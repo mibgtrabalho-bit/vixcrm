@@ -22,6 +22,7 @@ const navItems = [
   { icon: Users, label: "Contatos", href: "/contacts" },
   { icon: Building2, label: "Empresas", href: "/companies" },
   { icon: Target, label: "Metas", href: "/goals" },
+  { icon: BarChart3, label: "Relatórios", href: "/reports" },
   { icon: Settings, label: "Configurações", href: "/settings" },
 ];
 
