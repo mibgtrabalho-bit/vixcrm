@@ -345,6 +345,7 @@ export function DirectorDashboard({ filters }: DirectorDashboardProps) {
                     <TableHead className="text-right">Opps</TableHead>
                     <TableHead className="text-right">Pipeline</TableHead>
                     <TableHead className="text-right">Fechado</TableHead>
+                    <TableHead className="text-right">SaaS Fechado</TableHead>
                     <TableHead className="text-right">Conversão</TableHead>
                     <TableHead className="text-right">Ticket Médio</TableHead>
                   </TableRow>
