@@ -36,7 +36,11 @@ function KanbanSkeleton() {
   );
 }
 
-export function KanbanBoard() {
+interface KanbanBoardProps {
+  teamFilter?: string;
+}
+
+export function KanbanBoard({ teamFilter = "all" }: KanbanBoardProps) {
   const [opportunities, setOpportunities] = useState<Opportunity[]>([]);
   const [loading, setLoading] = useState(true);
   const [editingOpp, setEditingOpp] = useState<Opportunity | null>(null);
@@ -47,16 +51,33 @@ export function KanbanBoard() {
     value: string;
   }>({ open: false, opportunityId: "", value: "" });
   const [pendingDrop, setPendingDrop] = useState<DropResult | null>(null);
+  const [teamMemberIds, setTeamMemberIds] = useState<string[] | null>(null);
   const { profile } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
+  // Fetch team member IDs when teamFilter changes
+  useEffect(() => {
+    if (teamFilter === "all") {
+      setTeamMemberIds(null);
+      return;
+    }
+    const fetchTeamMembers = async () => {
+      const { data } = await supabase
+        .from("team_members")
+        .select("user_id")
+        .eq("team_id", teamFilter);
+      setTeamMemberIds((data || []).map((m) => m.user_id));
+    };
+    fetchTeamMembers();
+  }, [teamFilter]);
+
   useEffect(() => {
     if (profile?.tenant_id) fetchOpportunities();
-  }, [profile?.tenant_id]);
+  }, [profile?.tenant_id, teamMemberIds]);
 
   const fetchOpportunities = async () => {
-    const { data, error } = await supabase
+    let query = supabase
       .from("opportunities")
       .select(`
         id, title, value, value_implantacao, value_saas, stage, expected_close_date, notes, assigned_to, contact_id, company_id, first_payment_date,
@@ -64,6 +85,19 @@ export function KanbanBoard() {
         companies:company_id(name)
       `)
       .order("created_at", { ascending: true });
+
+    // Server-side team filter
+    if (teamMemberIds !== null) {
+      if (teamMemberIds.length === 0) {
+        // No members in team = no results
+        setOpportunities([]);
+        setLoading(false);
+        return;
+      }
+      query = query.in("assigned_to", teamMemberIds);
+    }
+
+    const { data, error } = await query;
 
     if (error) {
       console.error("Error fetching opportunities:", error);
