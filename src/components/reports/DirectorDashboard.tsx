@@ -177,7 +177,7 @@ export function DirectorDashboard({ filters }: DirectorDashboardProps) {
       const conv = so.length > 0 ? (sc.length / so.length) * 100 : 0;
       return { userId: uid, name: profileMap[uid] || "—", opps: so.length, closedVal, pipelineVal, closedCount: sc.length, conversion: conv, avgTicket: sc.length > 0 ? closedVal / sc.length : 0 };
     }).sort((a, b) => b.closedVal - a.closedVal);
-  }, [scopeUserIds, allOpportunities, profileMap, start, end]);
+  }, [sellerScopeIds, allOpportunities, profileMap, start, end]);
 
   // Stage map
   const stageMap = useMemo(() => {
