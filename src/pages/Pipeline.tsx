@@ -4,11 +4,13 @@ import { PageHeader } from "@/components/layout/PageHeader";
 import { KanbanBoard } from "@/components/pipeline/KanbanBoard";
 import { CreateOpportunityDialog } from "@/components/pipeline/CreateOpportunityDialog";
 import { PipelineTeamFilter } from "@/components/pipeline/PipelineTeamFilter";
+import { ExportCsvDialog } from "@/components/pipeline/ExportCsvDialog";
 import { Button } from "@/components/ui/button";
-import { Plus, LayoutGrid, List } from "lucide-react";
+import { Plus, LayoutGrid, List, Download } from "lucide-react";
 
 export default function Pipeline() {
   const [createOpen, setCreateOpen] = useState(false);
+  const [exportOpen, setExportOpen] = useState(false);
   const [viewMode, setViewMode] = useState<"kanban" | "list">("kanban");
   const [refreshKey, setRefreshKey] = useState(0);
   const [teamFilter, setTeamFilter] = useState("all");
@@ -39,6 +41,10 @@ export default function Pipeline() {
             <List className="h-4 w-4" />
           </button>
         </div>
+        <Button variant="outline" size="sm" onClick={() => setExportOpen(true)}>
+          <Download className="h-4 w-4" />
+          Exportar CSV
+        </Button>
         <Button onClick={() => setCreateOpen(true)} size="sm">
           <Plus className="h-4 w-4" />
           Nova Oportunidade
@@ -51,6 +57,12 @@ export default function Pipeline() {
         open={createOpen}
         onOpenChange={setCreateOpen}
         onCreated={handleCreated}
+      />
+
+      <ExportCsvDialog
+        open={exportOpen}
+        onOpenChange={setExportOpen}
+        currentFilter={teamFilter}
       />
     </AppLayout>
   );
