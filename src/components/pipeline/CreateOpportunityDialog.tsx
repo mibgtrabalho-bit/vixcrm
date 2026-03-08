@@ -108,31 +108,26 @@ export function CreateOpportunityDialog({ open, onOpenChange, onCreated }: Props
         setLoading(false);
         return;
       }
+      const newContactId = crypto.randomUUID();
       const contactPayload = {
+        id: newContactId,
         name: newContactName.trim(),
         email: newContactEmail || null,
         phone: newContactPhone || null,
         tenant_id: profile.tenant_id,
         created_by: user.id,
       };
-      console.log("[DEBUG] Contact insert payload:", JSON.stringify(contactPayload));
-      console.log("[DEBUG] auth user.id:", user.id);
-      console.log("[DEBUG] profile.tenant_id:", profile.tenant_id);
       
-      const { data: newContact, error: contactError } = await supabase
+      const { error: contactError } = await supabase
         .from("contacts")
-        .insert(contactPayload)
-        .select("id")
-        .single();
+        .insert(contactPayload);
 
       if (contactError) {
-        console.error("[DEBUG] Contact insert error:", JSON.stringify(contactError));
         toast({ title: "Erro ao criar contato", description: contactError.message, variant: "destructive" });
         setLoading(false);
         return;
       }
-      console.log("[DEBUG] Contact created successfully:", newContact.id);
-      finalContactId = newContact.id;
+      finalContactId = newContactId;
     }
 
     if (!finalContactId) {
