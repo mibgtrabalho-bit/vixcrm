@@ -2,6 +2,7 @@ import { AppLayout } from "@/components/layout/AppLayout";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { AccessManagement } from "@/components/settings/AccessManagement";
 import { TeamManagement } from "@/components/settings/TeamManagement";
+import { FunnelManagement } from "@/components/settings/FunnelManagement";
 
 export default function SettingsPage() {
   return (
@@ -9,6 +10,7 @@ export default function SettingsPage() {
       <PageHeader title="Configurações" description="Gerencie sua conta e empresa" />
       <div className="p-6 space-y-8">
         <TeamManagement />
+        <FunnelManagement />
         <AccessManagement />
       </div>
     </AppLayout>
