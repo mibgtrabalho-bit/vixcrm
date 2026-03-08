@@ -45,7 +45,7 @@ export default function Pipeline() {
         </Button>
       </PageHeader>
 
-      <KanbanBoard key={refreshKey} />
+      <KanbanBoard key={refreshKey} teamFilter={teamFilter} />
 
       <CreateOpportunityDialog
         open={createOpen}
