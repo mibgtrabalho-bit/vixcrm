@@ -259,17 +259,19 @@ export function StrategicSummary({ teamFilter }: StrategicSummaryProps) {
     return () => { cancelled = true; };
   }, [teamFilter, role, user?.id]);
 
-  const { data: values } = useQuery({
+  const { data: values, isLoading } = useQuery({
     queryKey: ["home-strategic-summary", filterUserIds, role, teamFilter, monthStr],
     queryFn: () => fetchSummaryData(filterUserIds, teamFilter, role, user?.id ?? null, monthStr),
     enabled: !!profile?.tenant_id && filterResolved,
     staleTime: 30_000,
-    initialData: EMPTY,
   });
 
-  const groups = buildGroups(role, values);
+  const loading = isLoading || !filterResolved;
+
+  const d = values ?? EMPTY;
+  const groups = buildGroups(role, d);
   const summaryLabel = getSummaryLabel(role);
-  const collapsed = collapsedItems(values);
+  const collapsed = collapsedItems(d);
 
   return (
     <div className="border-b border-border/60">
@@ -280,7 +282,7 @@ export function StrategicSummary({ teamFilter }: StrategicSummaryProps) {
       >
         <ChevronDown className={cn("h-3.5 w-3.5 transition-transform", !expanded && "-rotate-90")} />
         <span>{summaryLabel}</span>
-        {!expanded && (
+        {!expanded && !loading && (
           <div className="ml-3 flex items-center gap-4 text-[11px] overflow-x-auto">
             {collapsed.map((c) => (
               <span key={c.label} className="flex items-center gap-1 whitespace-nowrap">
@@ -290,39 +292,48 @@ export function StrategicSummary({ teamFilter }: StrategicSummaryProps) {
             ))}
           </div>
         )}
+        {!expanded && loading && (
+          <div className="ml-3 flex items-center gap-4">
+            {[1, 2, 3, 4].map((i) => (
+              <div key={i} className="h-3 w-16 rounded bg-muted animate-pulse" />
+            ))}
+          </div>
+        )}
       </button>
 
       {/* Expanded grouped metrics */}
       {expanded && (
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3 px-6 pb-3.5">
-          {groups.map((group) => (
-            <div
-              key={group.title}
-              className="rounded-xl border border-border/60 bg-card shadow-sm overflow-hidden"
-            >
-              {/* Group header */}
-              <div className="flex items-center gap-2 px-3.5 pt-3 pb-1.5">
-                <group.icon className={cn("h-3.5 w-3.5", group.color)} />
-                <span className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
-                  {group.title}
-                </span>
-              </div>
-              {/* Metric rows */}
-              <div className="px-3.5 pb-3 space-y-1">
-                {group.metrics.map((m) => (
-                  <div key={m.label} className="flex items-baseline justify-between gap-2">
-                    <span className="text-[12px] text-muted-foreground">{m.label}</span>
-                    <div className="text-right">
-                      <span className="text-[13px] font-semibold tabular-nums">{m.value}</span>
-                      {m.sub && (
-                        <p className="text-[10px] text-muted-foreground leading-tight">{m.sub}</p>
-                      )}
-                    </div>
+          {loading
+            ? [1, 2, 3, 4].map((i) => (
+                <div key={i} className="rounded-xl border border-border/60 bg-card h-[88px] animate-pulse" />
+              ))
+            : groups.map((group) => (
+                <div
+                  key={group.title}
+                  className="rounded-xl border border-border/60 bg-card shadow-sm overflow-hidden"
+                >
+                  <div className="flex items-center gap-2 px-3.5 pt-3 pb-1.5">
+                    <group.icon className={cn("h-3.5 w-3.5", group.color)} />
+                    <span className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                      {group.title}
+                    </span>
                   </div>
-                ))}
-              </div>
-            </div>
-          ))}
+                  <div className="px-3.5 pb-3 space-y-1">
+                    {group.metrics.map((m) => (
+                      <div key={m.label} className="flex items-baseline justify-between gap-2">
+                        <span className="text-[12px] text-muted-foreground">{m.label}</span>
+                        <div className="text-right">
+                          <span className="text-[13px] font-semibold tabular-nums">{m.value}</span>
+                          {m.sub && (
+                            <p className="text-[10px] text-muted-foreground leading-tight">{m.sub}</p>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ))}
         </div>
       )}
     </div>
