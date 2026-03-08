@@ -176,9 +176,11 @@ export function ManagerDashboard({ filters }: ManagerDashboardProps) {
       const sellerPipeline = sellerOpps.filter((o: any) => o.stage !== "fechado" && o.stage !== "perdido");
       const closedVal = sumField(sellerClosed, "value");
       const pipelineVal = sumField(sellerPipeline, "value");
+      const closedSaas = sumField(sellerClosed, "value_saas");
+      const pipelineSaas = sumField(sellerPipeline, "value_saas");
       const conv = sellerOpps.length > 0 ? (sellerClosed.length / sellerOpps.length) * 100 : 0;
       const avg = sellerClosed.length > 0 ? closedVal / sellerClosed.length : 0;
-      return { userId: uid, name: profileMap[uid] || "—", opps: sellerOpps.length, pipelineVal, closedVal, closedCount: sellerClosed.length, conversion: conv, avgTicket: avg };
+      return { userId: uid, name: profileMap[uid] || "—", opps: sellerOpps.length, pipelineVal, pipelineSaas, closedVal, closedSaas, closedCount: sellerClosed.length, conversion: conv, avgTicket: avg };
     }).sort((a, b) => b.closedVal - a.closedVal);
   }, [sellers, allOpportunitiesRaw, profileMap, start, end]);
 
@@ -287,6 +289,7 @@ export function ManagerDashboard({ filters }: ManagerDashboardProps) {
                     <TableHead className="text-right">Opps</TableHead>
                     <TableHead className="text-right">Pipeline</TableHead>
                     <TableHead className="text-right">Fechado</TableHead>
+                    <TableHead className="text-right">SaaS Fechado</TableHead>
                     <TableHead className="text-right">Conversão</TableHead>
                     <TableHead className="text-right">Ticket Médio</TableHead>
                   </TableRow>
@@ -296,8 +299,12 @@ export function ManagerDashboard({ filters }: ManagerDashboardProps) {
                     <TableRow key={s.userId}>
                       <TableCell className="text-sm font-medium">{s.name}</TableCell>
                       <TableCell className="text-sm text-right">{s.opps}</TableCell>
-                      <TableCell className="text-sm text-right">{formatCurrency(s.pipelineVal)}</TableCell>
+                      <TableCell className="text-sm text-right">
+                        <div>{formatCurrency(s.pipelineVal)}</div>
+                        <div className="text-xs text-muted-foreground">SaaS {formatCurrency(s.pipelineSaas)}</div>
+                      </TableCell>
                       <TableCell className="text-sm text-right">{formatCurrency(s.closedVal)}</TableCell>
+                      <TableCell className="text-sm text-right">{formatCurrency(s.closedSaas)}</TableCell>
                       <TableCell className="text-sm text-right">{s.conversion.toFixed(1).replace(".", ",")}%</TableCell>
                       <TableCell className="text-sm text-right">{formatCurrency(s.avgTicket)}</TableCell>
                     </TableRow>
