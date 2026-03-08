@@ -601,6 +601,33 @@ export function AccessManagement() {
                               <RotateCcw className="h-4 w-4 text-muted-foreground" />
                             </Button>
                           )}
+                          {/* Delete invite button */}
+                          <AlertDialog>
+                            <AlertDialogTrigger asChild>
+                              <Button variant="ghost" size="icon" className="h-8 w-8" title="Excluir convite" disabled={deleteLoading}>
+                                <Trash2 className="h-4 w-4 text-muted-foreground hover:text-destructive" />
+                              </Button>
+                            </AlertDialogTrigger>
+                            <AlertDialogContent>
+                              <AlertDialogHeader>
+                                <AlertDialogTitle>Excluir convite?</AlertDialogTitle>
+                                <AlertDialogDescription>
+                                  {inv.status === "pending"
+                                    ? `O convite pendente para ${inv.email} será revogado e removido.`
+                                    : `O registro de convite para ${inv.email} será removido.`}
+                                </AlertDialogDescription>
+                              </AlertDialogHeader>
+                              <AlertDialogFooter>
+                                <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                                <AlertDialogAction
+                                  onClick={() => deleteInvite(inv.id, inv.email)}
+                                  className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                                >
+                                  Excluir
+                                </AlertDialogAction>
+                              </AlertDialogFooter>
+                            </AlertDialogContent>
+                          </AlertDialog>
                         </div>
                       </TableCell>
                     </TableRow>
