@@ -77,7 +77,7 @@ export function KanbanBoard({ teamFilter = "all" }: KanbanBoardProps) {
   }, [profile?.tenant_id, teamMemberIds]);
 
   const fetchOpportunities = async () => {
-    const { data, error } = await supabase
+    let query = supabase
       .from("opportunities")
       .select(`
         id, title, value, value_implantacao, value_saas, stage, expected_close_date, notes, assigned_to, contact_id, company_id, first_payment_date,
@@ -85,6 +85,17 @@ export function KanbanBoard({ teamFilter = "all" }: KanbanBoardProps) {
         companies:company_id(name)
       `)
       .order("created_at", { ascending: true });
+
+    // Server-side team filter
+    if (teamMemberIds !== null) {
+      if (teamMemberIds.length === 0) {
+        // No members in team = no results
+        setOpportunities([]);
+        setLoading(false);
+        return;
+      }
+      query = query.in("assigned_to", teamMemberIds);
+    }
 
     if (error) {
       console.error("Error fetching opportunities:", error);
