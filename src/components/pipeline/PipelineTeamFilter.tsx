@@ -71,7 +71,7 @@ export function PipelineTeamFilter({ value, onChange }: PipelineTeamFilterProps)
       const memberUserIds = [...new Set((members || []).map((m: any) => m.user_id))];
 
       const { data: profiles } = memberUserIds.length > 0
-        ? await supabase.from("profiles").select("user_id, full_name").in("user_id", memberUserIds)
+        ? await supabase.from("profiles").select("user_id, full_name").in("user_id", memberUserIds).eq("is_active", true)
         : { data: [] };
 
       const profileMap = new Map((profiles || []).map((p: any) => [p.user_id, p.full_name]));
