@@ -34,8 +34,9 @@ export function DirectorDashboard({ filters }: DirectorDashboardProps) {
       ]);
       const roleMap = Object.fromEntries((roles || []).map((r: any) => [r.user_id, r.role]));
       const profileMap = Object.fromEntries((profiles || []).map((p: any) => [p.user_id, p.full_name]));
-      const sellerIds = [...new Set((members || []).map((m: any) => m.user_id))].filter((id) => roleMap[id] === "vendedor");
-      return { teams: teams || [], members: members || [], profileMap, roleMap, sellerIds };
+      const allUserIds = [...new Set((members || []).map((m: any) => m.user_id))];
+      const sellerIds = allUserIds.filter((id) => roleMap[id] === "vendedor");
+      return { teams: teams || [], members: members || [], profileMap, roleMap, sellerIds, allUserIds };
     },
     enabled: !!profile?.tenant_id,
   });
@@ -44,9 +45,18 @@ export function DirectorDashboard({ filters }: DirectorDashboardProps) {
   const members = orgData?.members || [];
   const profileMap = orgData?.profileMap || {};
   const sellerIds = orgData?.sellerIds || [];
+  const allUserIds = orgData?.allUserIds || [];
 
-  // Resolve filter scope
+  // Resolve filter scope — use ALL user IDs for opportunity queries (not just vendedores)
   const scopeUserIds = useMemo(() => {
+    if (filters.team === "all") return allUserIds;
+    if (filters.team.startsWith("user:")) return [filters.team.slice(5)];
+    const teamId = filters.team.startsWith("team:") ? filters.team.slice(5) : filters.team;
+    return members.filter((m: any) => m.team_id === teamId).map((m: any) => m.user_id);
+  }, [filters.team, allUserIds, members]);
+
+  // Seller-only scope for ranking table
+  const sellerScopeIds = useMemo(() => {
     if (filters.team === "all") return sellerIds;
     if (filters.team.startsWith("user:")) return [filters.team.slice(5)];
     const teamId = filters.team.startsWith("team:") ? filters.team.slice(5) : filters.team;
@@ -158,7 +168,7 @@ export function DirectorDashboard({ filters }: DirectorDashboardProps) {
 
   // Seller ranking
   const sellerRanking = useMemo(() => {
-    return scopeUserIds.map((uid) => {
+    return sellerScopeIds.map((uid) => {
       const so = allOpportunities.filter((o: any) => o.assigned_to === uid);
       const sc = so.filter((o: any) => o.stage === "fechado" && isClosedInPeriod(o, start, end));
       const sp = so.filter((o: any) => o.stage !== "fechado" && o.stage !== "perdido");
@@ -167,7 +177,7 @@ export function DirectorDashboard({ filters }: DirectorDashboardProps) {
       const conv = so.length > 0 ? (sc.length / so.length) * 100 : 0;
       return { userId: uid, name: profileMap[uid] || "—", opps: so.length, closedVal, pipelineVal, closedCount: sc.length, conversion: conv, avgTicket: sc.length > 0 ? closedVal / sc.length : 0 };
     }).sort((a, b) => b.closedVal - a.closedVal);
-  }, [scopeUserIds, allOpportunities, profileMap, start, end]);
+  }, [sellerScopeIds, allOpportunities, profileMap, start, end]);
 
   // Stage map
   const stageMap = useMemo(() => {
