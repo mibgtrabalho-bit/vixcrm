@@ -52,7 +52,11 @@ export default function Pipeline() {
         </Button>
       </PageHeader>
 
-      <KanbanBoard key={refreshKey} teamFilter={teamFilter} />
+      {viewMode === "kanban" ? (
+        <KanbanBoard key={refreshKey} teamFilter={teamFilter} />
+      ) : (
+        <PipelineListView key={refreshKey} teamFilter={teamFilter} />
+      )}
 
       <CreateOpportunityDialog
         open={createOpen}
