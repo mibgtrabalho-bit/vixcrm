@@ -119,6 +119,18 @@ export function AccessManagement() {
       .from("teams")
       .select("id, name");
 
+    // Fetch tenant CNPJ
+    const { data: tenantData } = await supabase
+      .from("tenants")
+      .select("cnpj")
+      .eq("id", profile.tenant_id)
+      .single();
+
+    if (tenantData?.cnpj) {
+      setTenantCnpj(tenantData.cnpj);
+      setCnpjSaved(true);
+    }
+
     setTeams(teamsData || []);
 
     const roleMap = new Map((roles || []).map((r: any) => [r.user_id, r.role]));
