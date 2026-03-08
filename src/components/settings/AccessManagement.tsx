@@ -171,7 +171,7 @@ export function AccessManagement() {
     // Fetch invitations
     const { data: invs } = await supabase
       .from("invitations")
-      .select("id, email, role, status, token, created_at, teams:team_id(name)")
+      .select("id, email, role, status, token, created_at, team_id, teams:team_id(name)")
       .order("created_at", { ascending: false });
 
     setInvitations(
