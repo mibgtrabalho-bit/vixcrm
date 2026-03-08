@@ -4,6 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { PIPELINE_STAGES } from "@/lib/constants";
 import { formatCurrency, getPeriodRange, isClosedInPeriod, sumField } from "@/lib/metrics";
+import { parsePipelineFilter } from "@/components/pipeline/PipelineTeamFilter";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import {
@@ -16,8 +17,9 @@ interface ManagerDashboardProps {
 }
 
 export function ManagerDashboard({ filters }: ManagerDashboardProps) {
-  const { user, profile } = useAuth();
+  const { user } = useAuth();
   const { start, end, monthStr } = useMemo(() => getPeriodRange(filters.period), [filters.period]);
+  const parsed = useMemo(() => parsePipelineFilter(filters.team), [filters.team]);
 
   // 1. Get manager's team(s) and members
   const { data: teamData } = useQuery({
@@ -61,8 +63,18 @@ export function ManagerDashboard({ filters }: ManagerDashboardProps) {
   const profileMap = teamData?.profileMap || {};
   const teamIds = teamData?.teamIds || [];
 
-  // 2. Opportunities — fetch all for team members (not just sellers), filter closing date client-side
-  const { data: allOpportunities = [] } = useQuery({
+  // Resolve scope user IDs based on filter selection
+  const scopeUserIds = useMemo(() => {
+    if (parsed.type === "user" && parsed.id) return [parsed.id];
+    if (parsed.type === "team" && parsed.id) {
+      const members = teamData?.members || [];
+      return [...new Set(members.filter((m: any) => m.team_id === parsed.id).map((m: any) => m.user_id))];
+    }
+    return allMemberIds;
+  }, [parsed, allMemberIds, teamData?.members]);
+
+  // 2. Opportunities — fetch all for team members, filter by scope client-side
+  const { data: allOpportunitiesRaw = [] } = useQuery({
     queryKey: ["mgr-dash-opps", allMemberIds.join(","), filters.stage],
     queryFn: async () => {
       if (allMemberIds.length === 0) return [];
@@ -78,24 +90,56 @@ export function ManagerDashboard({ filters }: ManagerDashboardProps) {
     enabled: allMemberIds.length > 0,
   });
 
-  // 3. Team target
+  // Filter opportunities to selected scope
+  const allOpportunities = useMemo(() => {
+    const idSet = new Set(scopeUserIds);
+    return allOpportunitiesRaw.filter((o: any) => idSet.has(o.assigned_to));
+  }, [allOpportunitiesRaw, scopeUserIds]);
+
+  // 3. Target — team or seller depending on filter
+  const isUserScope = parsed.type === "user" && !!parsed.id;
+  const scopeTeamId = parsed.type === "team" && parsed.id ? parsed.id : null;
+
+  // Team target (used when scope is team or all)
   const { data: teamTarget } = useQuery({
-    queryKey: ["mgr-dash-team-target", teamIds.join(","), monthStr],
+    queryKey: ["mgr-dash-team-target", scopeTeamId || teamIds.join(","), monthStr],
     queryFn: async () => {
-      if (teamIds.length === 0) return { target_saas: 0, target_setup: 0 };
+      const ids = scopeTeamId ? [scopeTeamId] : teamIds;
+      if (ids.length === 0) return { target_saas: 0, target_setup: 0 };
       const { data } = await supabase
         .from("team_targets")
         .select("target_saas, target_setup")
-        .in("team_id", teamIds)
+        .in("team_id", ids)
         .eq("month", monthStr);
       let tSaas = 0, tSetup = 0;
       (data || []).forEach((t: any) => { tSaas += Number(t.target_saas) || 0; tSetup += Number(t.target_setup) || 0; });
       return { target_saas: tSaas, target_setup: tSetup };
     },
-    enabled: teamIds.length > 0,
+    enabled: !isUserScope && teamIds.length > 0,
   });
 
-  // Derived — uses canonical closing date via isClosedInPeriod
+  // Seller target (used when scope is a specific user)
+  const { data: sellerTarget } = useQuery({
+    queryKey: ["mgr-dash-seller-target", parsed.id, monthStr],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("monthly_targets")
+        .select("target_saas, target_setup")
+        .eq("user_id", parsed.id!)
+        .eq("month", monthStr)
+        .maybeSingle();
+      return {
+        target_saas: Number(data?.target_saas) || 0,
+        target_setup: Number(data?.target_setup) || 0,
+      };
+    },
+    enabled: isUserScope,
+  });
+
+  // Unified target values
+  const activeTarget = isUserScope ? sellerTarget : teamTarget;
+
+  // Derived
   const closed = useMemo(
     () => allOpportunities.filter((o: any) => o.stage === "fechado" && isClosedInPeriod(o, start, end)),
     [allOpportunities, start, end],
@@ -107,11 +151,9 @@ export function ManagerDashboard({ filters }: ManagerDashboardProps) {
 
   const closedSaas = sumField(closed, "value_saas");
   const closedSetup = sumField(closed, "value_implantacao");
-  const pipelineSaas = sumField(pipeline, "value_saas");
-  const pipelineSetup = sumField(pipeline, "value_implantacao");
 
-  const tSaas = teamTarget?.target_saas ?? 0;
-  const tSetup = teamTarget?.target_setup ?? 0;
+  const tSaas = activeTarget?.target_saas ?? 0;
+  const tSetup = activeTarget?.target_setup ?? 0;
   const pctSaas = tSaas > 0 ? Math.min((closedSaas / tSaas) * 100, 100) : 0;
   const pctSetup = tSetup > 0 ? Math.min((closedSetup / tSetup) * 100, 100) : 0;
 
@@ -126,10 +168,10 @@ export function ManagerDashboard({ filters }: ManagerDashboardProps) {
     return cycles.length > 0 ? Math.round(cycles.reduce((a, b) => a + b, 0) / cycles.length) : 0;
   }, [closed]);
 
-  // Seller performance
+  // Seller performance (always from full team scope for the ranking table)
   const sellerPerf = useMemo(() => {
     return sellers.map((uid) => {
-      const sellerOpps = allOpportunities.filter((o: any) => o.assigned_to === uid);
+      const sellerOpps = allOpportunitiesRaw.filter((o: any) => o.assigned_to === uid);
       const sellerClosed = sellerOpps.filter((o: any) => o.stage === "fechado" && isClosedInPeriod(o, start, end));
       const sellerPipeline = sellerOpps.filter((o: any) => o.stage !== "fechado" && o.stage !== "perdido");
       const closedVal = sumField(sellerClosed, "value");
@@ -138,9 +180,9 @@ export function ManagerDashboard({ filters }: ManagerDashboardProps) {
       const avg = sellerClosed.length > 0 ? closedVal / sellerClosed.length : 0;
       return { userId: uid, name: profileMap[uid] || "—", opps: sellerOpps.length, pipelineVal, closedVal, closedCount: sellerClosed.length, conversion: conv, avgTicket: avg };
     }).sort((a, b) => b.closedVal - a.closedVal);
-  }, [sellers, allOpportunities, profileMap, start, end]);
+  }, [sellers, allOpportunitiesRaw, profileMap, start, end]);
 
-  // Stage distribution
+  // Stage distribution (scoped)
   const stageMap = useMemo(() => {
     const map: Record<string, { count: number; value: number }> = {};
     PIPELINE_STAGES.forEach((s) => (map[s.id] = { count: 0, value: 0 }));
@@ -152,7 +194,6 @@ export function ManagerDashboard({ filters }: ManagerDashboardProps) {
 
   return (
     <div className="space-y-6">
-      {/* Summary cards */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between pb-2">
@@ -207,7 +248,6 @@ export function ManagerDashboard({ filters }: ManagerDashboardProps) {
         </Card>
       </div>
 
-      {/* Pipeline by stage */}
       <Card>
         <CardHeader>
           <CardTitle className="text-sm font-medium flex items-center gap-2">
@@ -228,7 +268,6 @@ export function ManagerDashboard({ filters }: ManagerDashboardProps) {
         </CardContent>
       </Card>
 
-      {/* Seller performance */}
       <Card>
         <CardHeader>
           <CardTitle className="text-sm font-medium flex items-center gap-2">
