@@ -96,6 +96,8 @@ export function AccessManagement() {
   const [inviteLoading, setInviteLoading] = useState(false);
   const [copiedToken, setCopiedToken] = useState<string | null>(null);
   const [generatedLink, setGeneratedLink] = useState<string | null>(null);
+  const [tenantCnpj, setTenantCnpj] = useState<string>("");
+  const [cnpjSaved, setCnpjSaved] = useState(false);
 
   const fetchAll = useCallback(async () => {
     if (!profile?.tenant_id) return;
@@ -116,6 +118,18 @@ export function AccessManagement() {
     const { data: teamsData } = await supabase
       .from("teams")
       .select("id, name");
+
+    // Fetch tenant CNPJ
+    const { data: tenantData } = await supabase
+      .from("tenants")
+      .select("cnpj")
+      .eq("id", profile.tenant_id)
+      .single();
+
+    if (tenantData?.cnpj) {
+      setTenantCnpj(tenantData.cnpj);
+      setCnpjSaved(true);
+    }
 
     setTeams(teamsData || []);
 
@@ -166,6 +180,11 @@ export function AccessManagement() {
     fetchAll();
   }, [fetchAll]);
 
+  const validateCnpj = (cnpj: string) => {
+    const cleaned = cnpj.replace(/\D/g, "");
+    return cleaned.length === 14;
+  };
+
   const handleInvite = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!user || !profile) return;
@@ -174,7 +193,25 @@ export function AccessManagement() {
       toast({ title: "Time obrigatório", description: "Selecione um time para o convite.", variant: "destructive" });
       return;
     }
+    if (!tenantCnpj || !validateCnpj(tenantCnpj)) {
+      toast({ title: "CNPJ inválido", description: "Informe um CNPJ válido com 14 dígitos.", variant: "destructive" });
+      return;
+    }
     setInviteLoading(true);
+
+    // Save CNPJ to tenant if not yet saved
+    if (!cnpjSaved) {
+      const { error: cnpjError } = await supabase
+        .from("tenants")
+        .update({ cnpj: tenantCnpj.replace(/\D/g, "") } as any)
+        .eq("id", profile.tenant_id);
+      if (cnpjError) {
+        toast({ title: "Erro ao salvar CNPJ", description: cnpjError.message, variant: "destructive" });
+        setInviteLoading(false);
+        return;
+      }
+      setCnpjSaved(true);
+    }
 
     const { data, error } = await supabase
       .from("invitations")
@@ -474,6 +511,20 @@ export function AccessManagement() {
             </div>
           ) : (
             <form onSubmit={handleInvite} className="space-y-4">
+              <div>
+                <Label>CNPJ da Empresa *</Label>
+                <Input
+                  value={tenantCnpj}
+                  onChange={(e) => setTenantCnpj(e.target.value)}
+                  placeholder="00.000.000/0000-00"
+                  required
+                  readOnly={cnpjSaved}
+                  maxLength={18}
+                />
+                {cnpjSaved && (
+                  <p className="text-xs text-muted-foreground mt-1">CNPJ já cadastrado para esta empresa.</p>
+                )}
+              </div>
               <div>
                 <Label>E-mail *</Label>
                 <Input
