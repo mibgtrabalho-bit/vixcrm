@@ -100,7 +100,7 @@ export function TeamManagement() {
       await Promise.all([
         supabase.from("teams").select("id, name, created_at").order("name"),
         supabase.from("team_members").select("id, team_id, user_id"),
-        supabase.from("profiles").select("user_id, full_name, email"),
+        supabase.from("profiles").select("user_id, full_name, email, is_active"),
         supabase.from("user_roles").select("user_id, role"),
       ]);
 

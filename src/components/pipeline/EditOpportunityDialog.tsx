@@ -93,7 +93,7 @@ export function EditOpportunityDialog({ open, onOpenChange, opportunity, onUpdat
       supabase.from("contacts").select("id, name").then(({ data }) => setContacts(data || []));
       supabase.from("companies").select("id, name").then(({ data }) => setCompanies(data || []));
       if (canChangeOwner) {
-        supabase.from("profiles").select("user_id, full_name").then(({ data }) => setTeamMembers(data || []));
+        supabase.from("profiles").select("user_id, full_name").eq("is_active", true).then(({ data }) => setTeamMembers(data || []));
       }
     }
   }, [open, opportunity]);
