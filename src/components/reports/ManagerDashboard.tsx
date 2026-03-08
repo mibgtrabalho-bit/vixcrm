@@ -311,7 +311,7 @@ export function ManagerDashboard({ filters }: ManagerDashboardProps) {
                         </TableCell>
                         <TableCell className="text-sm text-right">
                           <div className="text-xs text-muted-foreground">Setup {formatCurrency(s.closedSetup)}</div>
-                          <div className="text-xs text-muted-foreground">SaaS/mês {formatCurrency(s.closedSaas)}</div>
+                          <div className="text-xs text-muted-foreground">SaaS {formatCurrency(s.closedSaas)}</div>
                         </TableCell>
                         <TableCell className="text-sm text-right">{s.conversion.toFixed(1).replace(".", ",")}%</TableCell>
                         <TableCell className="text-sm text-right">{formatCurrency(s.avgTicket)}</TableCell>
