@@ -307,7 +307,7 @@ export function ManagerDashboard({ filters }: ManagerDashboardProps) {
                        <TableCell className="text-sm text-right">{s.opps}</TableCell>
                        <TableCell className="text-sm text-right">
                           <div className="text-xs text-muted-foreground">Setup {formatCurrency(s.pipelineSetup)}</div>
-                          <div className="text-xs text-muted-foreground">SaaS/mês {formatCurrency(s.pipelineSaas)}</div>
+                          <div className="text-xs text-muted-foreground">SaaS {formatCurrency(s.pipelineSaas)}</div>
                         </TableCell>
                         <TableCell className="text-sm text-right">
                           <div className="text-xs text-muted-foreground">Setup {formatCurrency(s.closedSetup)}</div>
