@@ -53,6 +53,7 @@ import {
   UserCheck,
   UserX,
   Check,
+  Trash2,
 } from "lucide-react";
 
 interface TeamOption {
@@ -106,6 +107,7 @@ export function AccessManagement() {
   const [generatedLink, setGeneratedLink] = useState<string | null>(null);
   const [tenantCnpj, setTenantCnpj] = useState<string>("");
   const [cnpjSaved, setCnpjSaved] = useState(false);
+  const [deleteLoading, setDeleteLoading] = useState(false);
 
   const fetchAll = useCallback(async () => {
     if (!profile?.tenant_id) return;
@@ -321,6 +323,55 @@ export function AccessManagement() {
     }
   };
 
+
+  const deleteUserAccess = async (targetUserId: string, userName: string) => {
+    setDeleteLoading(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("delete-user-access", {
+        body: { target_user_id: targetUserId },
+      });
+      if (error || data?.error) {
+        toast({ title: "Erro ao excluir", description: data?.error || error?.message, variant: "destructive" });
+      } else {
+        let desc = `Acesso de ${userName} foi removido.`;
+        if (data?.reassignment?.reassigned) {
+          desc += ` ${data.reassignment.opportunities} oportunidade(s) e ${data.reassignment.contacts} contato(s) foram reatribuídos.`;
+        } else if (data?.reassignment?.unassigned) {
+          desc += ` ${data.reassignment.opportunities} oportunidade(s) ficaram sem responsável (requer revisão do diretor).`;
+        }
+        toast({ title: "Acesso excluído", description: desc });
+        fetchAll();
+      }
+    } catch (e: any) {
+      toast({ title: "Erro", description: e.message, variant: "destructive" });
+    }
+    setDeleteLoading(false);
+  };
+
+  const deleteInvite = async (inviteId: string, email: string) => {
+    setDeleteLoading(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("delete-user-access", {
+        body: { target_invite_id: inviteId },
+      });
+      if (error || data?.error) {
+        toast({ title: "Erro ao excluir convite", description: data?.error || error?.message, variant: "destructive" });
+      } else {
+        toast({ title: "Convite excluído", description: `Convite para ${email} foi removido.` });
+        fetchAll();
+      }
+    } catch (e: any) {
+      toast({ title: "Erro", description: e.message, variant: "destructive" });
+    }
+    setDeleteLoading(false);
+  };
+
+  const canDeleteUser = (targetRole: string | null) => {
+    if (isDirector) return true;
+    if (isManager && targetRole === "vendedor") return true;
+    return false;
+  };
+
   const roleLabel = (r: string | null) => {
     switch (r) {
       case "vendedor": return "Vendedor";
@@ -411,7 +462,9 @@ export function AccessManagement() {
                         )}
                       </TableCell>
                       <TableCell>
+                        <div className="flex gap-1">
                         {u.user_id !== user?.id && (isDirector || (isManager && u.role !== 'gestor' && u.role !== 'diretor')) && (
+                          <>
                           <AlertDialog>
                             <AlertDialogTrigger asChild>
                               <Button variant="ghost" size="icon" className="h-8 w-8">
@@ -435,7 +488,36 @@ export function AccessManagement() {
                               </AlertDialogFooter>
                             </AlertDialogContent>
                           </AlertDialog>
+                          {canDeleteUser(u.role) && (
+                            <AlertDialog>
+                              <AlertDialogTrigger asChild>
+                                <Button variant="ghost" size="icon" className="h-8 w-8" title="Excluir acesso" disabled={deleteLoading}>
+                                  <Trash2 className="h-4 w-4 text-muted-foreground hover:text-destructive" />
+                                </Button>
+                              </AlertDialogTrigger>
+                              <AlertDialogContent>
+                                <AlertDialogHeader>
+                                  <AlertDialogTitle>Excluir acesso de {u.full_name}?</AlertDialogTitle>
+                                  <AlertDialogDescription>
+                                    Esta ação é permanente. O usuário não poderá mais acessar o sistema.
+                                    {u.is_active && " Oportunidades e contatos serão reatribuídos automaticamente para outros vendedores do mesmo time."}
+                                  </AlertDialogDescription>
+                                </AlertDialogHeader>
+                                <AlertDialogFooter>
+                                  <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                                  <AlertDialogAction
+                                    onClick={() => deleteUserAccess(u.user_id, u.full_name)}
+                                    className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                                  >
+                                    Excluir acesso
+                                  </AlertDialogAction>
+                                </AlertDialogFooter>
+                              </AlertDialogContent>
+                            </AlertDialog>
+                          )}
+                          </>
                         )}
+                        </div>
                       </TableCell>
                     </TableRow>
                   ))
@@ -519,6 +601,33 @@ export function AccessManagement() {
                               <RotateCcw className="h-4 w-4 text-muted-foreground" />
                             </Button>
                           )}
+                          {/* Delete invite button */}
+                          <AlertDialog>
+                            <AlertDialogTrigger asChild>
+                              <Button variant="ghost" size="icon" className="h-8 w-8" title="Excluir convite" disabled={deleteLoading}>
+                                <Trash2 className="h-4 w-4 text-muted-foreground hover:text-destructive" />
+                              </Button>
+                            </AlertDialogTrigger>
+                            <AlertDialogContent>
+                              <AlertDialogHeader>
+                                <AlertDialogTitle>Excluir convite?</AlertDialogTitle>
+                                <AlertDialogDescription>
+                                  {inv.status === "pending"
+                                    ? `O convite pendente para ${inv.email} será revogado e removido.`
+                                    : `O registro de convite para ${inv.email} será removido.`}
+                                </AlertDialogDescription>
+                              </AlertDialogHeader>
+                              <AlertDialogFooter>
+                                <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                                <AlertDialogAction
+                                  onClick={() => deleteInvite(inv.id, inv.email)}
+                                  className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                                >
+                                  Excluir
+                                </AlertDialogAction>
+                              </AlertDialogFooter>
+                            </AlertDialogContent>
+                          </AlertDialog>
                         </div>
                       </TableCell>
                     </TableRow>
