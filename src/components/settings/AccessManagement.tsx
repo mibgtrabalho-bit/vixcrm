@@ -512,6 +512,20 @@ export function AccessManagement() {
           ) : (
             <form onSubmit={handleInvite} className="space-y-4">
               <div>
+                <Label>CNPJ da Empresa *</Label>
+                <Input
+                  value={tenantCnpj}
+                  onChange={(e) => setTenantCnpj(e.target.value)}
+                  placeholder="00.000.000/0000-00"
+                  required
+                  readOnly={cnpjSaved}
+                  maxLength={18}
+                />
+                {cnpjSaved && (
+                  <p className="text-xs text-muted-foreground mt-1">CNPJ já cadastrado para esta empresa.</p>
+                )}
+              </div>
+              <div>
                 <Label>E-mail *</Label>
                 <Input
                   type="email"
