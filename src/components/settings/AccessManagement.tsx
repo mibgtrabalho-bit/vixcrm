@@ -505,8 +505,9 @@ export function AccessManagement() {
                               variant="ghost"
                               size="icon"
                               className="h-8 w-8"
-                              title="Reenviar"
+                              title="Gerar novo convite e copiar link"
                               onClick={() => resendInvite(inv)}
+                              disabled={inviteLoading}
                             >
                               <RotateCcw className="h-4 w-4 text-muted-foreground" />
                             </Button>
