@@ -97,6 +97,8 @@ export function KanbanBoard({ teamFilter = "all" }: KanbanBoardProps) {
       query = query.in("assigned_to", teamMemberIds);
     }
 
+    const { data, error } = await query;
+
     if (error) {
       console.error("Error fetching opportunities:", error);
       setLoading(false);
