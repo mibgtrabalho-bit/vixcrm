@@ -176,9 +176,11 @@ export function ManagerDashboard({ filters }: ManagerDashboardProps) {
       const sellerPipeline = sellerOpps.filter((o: any) => o.stage !== "fechado" && o.stage !== "perdido");
       const closedVal = sumField(sellerClosed, "value");
       const pipelineVal = sumField(sellerPipeline, "value");
+      const closedSaas = sumField(sellerClosed, "value_saas");
+      const pipelineSaas = sumField(sellerPipeline, "value_saas");
       const conv = sellerOpps.length > 0 ? (sellerClosed.length / sellerOpps.length) * 100 : 0;
       const avg = sellerClosed.length > 0 ? closedVal / sellerClosed.length : 0;
-      return { userId: uid, name: profileMap[uid] || "—", opps: sellerOpps.length, pipelineVal, closedVal, closedCount: sellerClosed.length, conversion: conv, avgTicket: avg };
+      return { userId: uid, name: profileMap[uid] || "—", opps: sellerOpps.length, pipelineVal, pipelineSaas, closedVal, closedSaas, closedCount: sellerClosed.length, conversion: conv, avgTicket: avg };
     }).sort((a, b) => b.closedVal - a.closedVal);
   }, [sellers, allOpportunitiesRaw, profileMap, start, end]);
 
