@@ -316,6 +316,51 @@ export type Database = {
           },
         ]
       }
+      opportunity_stage_history: {
+        Row: {
+          changed_at: string
+          changed_by: string
+          from_stage: Database["public"]["Enums"]["pipeline_stage"] | null
+          id: string
+          opportunity_id: string
+          tenant_id: string
+          to_stage: Database["public"]["Enums"]["pipeline_stage"]
+        }
+        Insert: {
+          changed_at?: string
+          changed_by: string
+          from_stage?: Database["public"]["Enums"]["pipeline_stage"] | null
+          id?: string
+          opportunity_id: string
+          tenant_id: string
+          to_stage: Database["public"]["Enums"]["pipeline_stage"]
+        }
+        Update: {
+          changed_at?: string
+          changed_by?: string
+          from_stage?: Database["public"]["Enums"]["pipeline_stage"] | null
+          id?: string
+          opportunity_id?: string
+          tenant_id?: string
+          to_stage?: Database["public"]["Enums"]["pipeline_stage"]
+        }
+        Relationships: [
+          {
+            foreignKeyName: "opportunity_stage_history_opportunity_id_fkey"
+            columns: ["opportunity_id"]
+            isOneToOne: false
+            referencedRelation: "opportunities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "opportunity_stage_history_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           avatar_url: string | null
