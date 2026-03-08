@@ -151,6 +151,8 @@ export function KanbanBoard({ teamFilter = "all" }: KanbanBoardProps) {
       company_id: o.company_id,
       assigned_to: o.assigned_to,
       first_payment_date: o.first_payment_date,
+      created_at: o.created_at,
+      last_activity_at: o.last_activity_at,
     }));
 
     setOpportunities(mapped);
