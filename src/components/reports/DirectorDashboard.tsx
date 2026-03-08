@@ -95,17 +95,31 @@ export function DirectorDashboard({ filters }: DirectorDashboardProps) {
     enabled: scopeUserIds.length > 0,
   });
 
-  // 3. Team targets (sum all teams or filtered)
-  const { data: teamTargets } = useQuery({
+  // 3. Targets — use monthly_targets for single seller, team_targets otherwise
+  const { data: resolvedTargets } = useQuery({
     queryKey: ["dir-dash-targets", filters.team, monthStr],
     queryFn: async () => {
+      if (filters.team.startsWith("user:")) {
+        // Single seller → use their monthly_targets (same source as SellerDashboard)
+        const userId = filters.team.slice(5);
+        const { data } = await supabase
+          .from("monthly_targets")
+          .select("target_saas, target_setup")
+          .eq("user_id", userId)
+          .eq("month", monthStr)
+          .maybeSingle();
+        return { saas: Number(data?.target_saas) || 0, setup: Number(data?.target_setup) || 0 };
+      }
+      // Team or all → use team_targets
       let q = supabase.from("team_targets").select("team_id, target_saas, target_setup").eq("month", monthStr);
-      if (filters.team !== "all" && !filters.team.startsWith("user:")) {
+      if (filters.team !== "all") {
         const teamId = filters.team.startsWith("team:") ? filters.team.slice(5) : filters.team;
         q = q.eq("team_id", teamId);
       }
       const { data } = await q;
-      return data || [];
+      const saas = (data || []).reduce((s: number, t: any) => s + (Number(t.target_saas) || 0), 0);
+      const setup = (data || []).reduce((s: number, t: any) => s + (Number(t.target_setup) || 0), 0);
+      return { saas, setup };
     },
     enabled: !!profile?.tenant_id,
   });
@@ -118,8 +132,8 @@ export function DirectorDashboard({ filters }: DirectorDashboardProps) {
   const closedSetup = closed.reduce((s: number, o: any) => s + (Number(o.value_implantacao) || 0), 0);
   const pipelineTotal = pipeline.reduce((s: number, o: any) => s + (Number(o.value) || 0), 0);
 
-  const tSaas = (teamTargets || []).reduce((s: number, t: any) => s + (Number(t.target_saas) || 0), 0);
-  const tSetup = (teamTargets || []).reduce((s: number, t: any) => s + (Number(t.target_setup) || 0), 0);
+  const tSaas = resolvedTargets?.saas ?? 0;
+  const tSetup = resolvedTargets?.setup ?? 0;
   const pctSaas = tSaas > 0 ? Math.min((closedSaas / tSaas) * 100, 100) : 0;
   const pctSetup = tSetup > 0 ? Math.min((closedSetup / tSetup) * 100, 100) : 0;
 
