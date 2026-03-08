@@ -45,9 +45,18 @@ export function DirectorDashboard({ filters }: DirectorDashboardProps) {
   const members = orgData?.members || [];
   const profileMap = orgData?.profileMap || {};
   const sellerIds = orgData?.sellerIds || [];
+  const allUserIds = orgData?.allUserIds || [];
 
-  // Resolve filter scope
+  // Resolve filter scope — use ALL user IDs for opportunity queries (not just vendedores)
   const scopeUserIds = useMemo(() => {
+    if (filters.team === "all") return allUserIds;
+    if (filters.team.startsWith("user:")) return [filters.team.slice(5)];
+    const teamId = filters.team.startsWith("team:") ? filters.team.slice(5) : filters.team;
+    return members.filter((m: any) => m.team_id === teamId).map((m: any) => m.user_id);
+  }, [filters.team, allUserIds, members]);
+
+  // Seller-only scope for ranking table
+  const sellerScopeIds = useMemo(() => {
     if (filters.team === "all") return sellerIds;
     if (filters.team.startsWith("user:")) return [filters.team.slice(5)];
     const teamId = filters.team.startsWith("team:") ? filters.team.slice(5) : filters.team;
