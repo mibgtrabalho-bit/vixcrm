@@ -111,9 +111,17 @@ export function AccessManagement() {
       .from("user_roles")
       .select("user_id, role");
 
+    // First get the current user's team IDs (for manager scoping)
+    const { data: myTeams } = await supabase
+      .from("team_members")
+      .select("team_id")
+      .eq("user_id", user?.id ?? "");
+
+    const myTeamIds = new Set((myTeams || []).map((t: any) => t.team_id));
+
     const { data: teamMembers } = await supabase
       .from("team_members")
-      .select("user_id, teams:team_id(name)");
+      .select("user_id, team_id, teams:team_id(name)");
 
     const { data: teamsData } = await supabase
       .from("teams")
@@ -147,12 +155,14 @@ export function AccessManagement() {
       team_name: teamMap.get(p.user_id) || null,
     }));
 
-    // Manager: filter to only users in their teams
+    // Manager: filter to only users who share a team with the manager
     if (isManager && !isDirector) {
-      const myTeamUserIds = new Set(
-        (teamMembers || []).map((tm: any) => tm.user_id)
+      const usersInMyTeams = new Set(
+        (teamMembers || [])
+          .filter((tm: any) => myTeamIds.has(tm.team_id))
+          .map((tm: any) => tm.user_id)
       );
-      setUsers(userRows.filter((u) => myTeamUserIds.has(u.user_id) || u.user_id === user?.id));
+      setUsers(userRows.filter((u) => usersInMyTeams.has(u.user_id) || u.user_id === user?.id));
     } else {
       setUsers(userRows);
     }
@@ -364,7 +374,7 @@ export function AccessManagement() {
                         )}
                       </TableCell>
                       <TableCell>
-                        {u.user_id !== user?.id && (
+                        {u.user_id !== user?.id && (isDirector || (isManager && u.role !== 'gestor' && u.role !== 'diretor')) && (
                           <AlertDialog>
                             <AlertDialogTrigger asChild>
                               <Button variant="ghost" size="icon" className="h-8 w-8">
