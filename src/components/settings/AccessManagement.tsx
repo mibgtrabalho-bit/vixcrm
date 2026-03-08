@@ -247,7 +247,7 @@ export function AccessManagement() {
     if (error) {
       toast({ title: "Erro ao convidar", description: error.message, variant: "destructive" });
     } else {
-      const link = `${window.location.origin}/auth?invite=${data.token}`;
+      const link = getInviteLink(data.token);
       setGeneratedLink(link);
       toast({ title: "Convite criado!" });
       fetchAll();
