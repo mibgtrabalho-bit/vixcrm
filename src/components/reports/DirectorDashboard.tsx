@@ -288,7 +288,7 @@ export function DirectorDashboard({ filters }: DirectorDashboardProps) {
                 <p className="text-xs text-muted-foreground truncate">{s.label}</p>
                 <p className="text-lg font-bold mt-1">{stageMap[s.id]?.count ?? 0}</p>
                 <p className="text-xs text-muted-foreground">Setup {formatCurrency(stageMap[s.id]?.setup ?? 0)}</p>
-                <p className="text-xs text-muted-foreground">SaaS/mês {formatCurrency(stageMap[s.id]?.saas ?? 0)}</p>
+                <p className="text-xs text-muted-foreground">SaaS {formatCurrency(stageMap[s.id]?.saas ?? 0)}</p>
               </div>
             ))}
           </div>
