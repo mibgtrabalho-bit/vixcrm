@@ -41,7 +41,7 @@ interface PipelineTeamFilterProps {
   sellersOnly?: boolean;
 }
 
-export function PipelineTeamFilter({ value, onChange }: PipelineTeamFilterProps) {
+export function PipelineTeamFilter({ value, onChange, sellersOnly = false }: PipelineTeamFilterProps) {
   const [teamsWithMembers, setTeamsWithMembers] = useState<TeamWithMembers[]>([]);
   const [loading, setLoading] = useState(true);
   const [open, setOpen] = useState(false);
@@ -49,7 +49,7 @@ export function PipelineTeamFilter({ value, onChange }: PipelineTeamFilterProps)
 
   useEffect(() => {
     if (user?.id && role) fetchData();
-  }, [role, user?.id]);
+  }, [role, user?.id, sellersOnly]);
 
   const fetchData = async () => {
     if (!user?.id) return;
