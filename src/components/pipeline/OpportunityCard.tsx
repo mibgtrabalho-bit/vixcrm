@@ -30,7 +30,26 @@ interface Props {
 
 const fmt = new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" });
 
+function getInactivityState(opportunity: Opportunity): "normal" | "warning" | "critical" {
+  const ref = opportunity.last_activity_at || opportunity.created_at;
+  if (!ref) return "normal";
+  const now = Date.now();
+  const diffMs = now - new Date(ref).getTime();
+  const diffDays = diffMs / (1000 * 60 * 60 * 24);
+  if (diffDays >= 5) return "critical";
+  if (diffDays >= 3) return "warning";
+  return "normal";
+}
+
+const inactivityStyles = {
+  normal: "",
+  warning: "border-amber-400/70 bg-amber-50/60 dark:bg-amber-950/20 dark:border-amber-500/40",
+  critical: "border-red-400/70 bg-red-50/60 dark:bg-red-950/20 dark:border-red-500/40",
+};
+
 export function OpportunityCard({ opportunity, index, onClick }: Props) {
+  const state = getInactivityState(opportunity);
+
   return (
     <Draggable draggableId={opportunity.id} index={index}>
       {(provided, snapshot) => (
@@ -39,7 +58,9 @@ export function OpportunityCard({ opportunity, index, onClick }: Props) {
           {...provided.draggableProps}
           {...provided.dragHandleProps}
           onClick={() => onClick?.(opportunity)}
-          className={`rounded-xl border border-border/50 bg-card p-3.5 shadow-xs transition-apple cursor-pointer ${
+          className={`rounded-xl border p-3.5 shadow-xs transition-apple cursor-pointer ${
+            inactivityStyles[state] || "border-border/50 bg-card"
+          } ${
             snapshot.isDragging ? "shadow-lg ring-2 ring-primary/15 scale-[1.02]" : "hover:shadow-sm hover:border-border"
           }`}
         >
