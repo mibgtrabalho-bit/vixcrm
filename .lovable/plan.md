@@ -1,81 +1,62 @@
 
 
-# CRM de Vendas - Plano de Implementação
+## Root Cause
 
-## Visão Geral
-CRM multi-empresa com funis Kanban, gestão de times, dashboards de vendas e metas. Visual clean e minimalista, inspirado no Pipedrive. Backend com Supabase (a ser conectado).
+All RLS policies on `invitations` are **RESTRICTIVE**. PostgreSQL requires at least one **PERMISSIVE** policy to grant base access; RESTRICTIVE policies only narrow existing access. With zero PERMISSIVE policies, every SELECT/INSERT/UPDATE is denied — including the revoke update.
 
----
+## Exact Changes
 
-## Fase 1 — Fundação (Auth + Estrutura + Kanban)
+### 1. Database migration — fix invitations RLS + add audit columns
 
-### 1.1 Autenticação e Estrutura Multi-empresa
-- Login por e-mail/senha com Supabase Auth
-- Cadastro de empresas (tenants) com planos por faixa de usuários (1-10, 11-20, etc.)
-- Cada usuário vinculado a uma empresa
-- 3 níveis de acesso: **Vendedor**, **Gestor**, **Diretor**
-- Convite de novos usuários pelo Gestor/Diretor
+```sql
+-- Add revoked_at / revoked_by columns
+ALTER TABLE public.invitations ADD COLUMN IF NOT EXISTS revoked_at timestamptz;
+ALTER TABLE public.invitations ADD COLUMN IF NOT EXISTS revoked_by uuid;
 
-### 1.2 Kanban de Oportunidades
-- Board Kanban com as 7 colunas padrão: Prospecção → Follow-up → Agenda → Proposta → Negociação → Fechado → Perdido
-- Drag & drop de cards entre colunas
-- **Regra de negócio**: Coluna "Proposta" exige valor preenchido — bloqueio ao mover card sem valor
-- Alternância de visualização: **Kanban ↔ Lista**
-- Filtros por vendedor, data, valor
+-- Drop the two broken RESTRICTIVE policies
+DROP POLICY IF EXISTS "Directors manage invitations" ON public.invitations;
+DROP POLICY IF EXISTS "Managers manage team invitations" ON public.invitations;
 
-### 1.3 Visibilidade por Nível de Acesso
-- **Vendedor**: vê apenas suas oportunidades e as atribuídas a ele
-- **Gestor**: vê oportunidades do seu time, pode mover cards entre membros do time
-- **Diretor**: vê tudo, move cards de qualquer usuário para qualquer outro
+-- Recreate as PERMISSIVE
+CREATE POLICY "Directors manage invitations"
+ON public.invitations FOR ALL TO authenticated
+USING (tenant_id = get_user_tenant(auth.uid()) AND has_role(auth.uid(), 'diretor'))
+WITH CHECK (tenant_id = get_user_tenant(auth.uid()) AND has_role(auth.uid(), 'diretor'));
 
-### 1.4 Cadastro de Leads/Empresas
-- Formulário de **Contato**: Nome do decisor, e-mail, telefone + campos personalizáveis
-- Formulário de **Empresa**: CNPJ (com auto-preenchimento via API da Receita Federal), endereço, site, valor da venda
-- Contato obrigatório ao cadastrar empresa
-- Vinculação Contato ↔ Empresa ↔ Oportunidade
+CREATE POLICY "Managers manage team invitations"
+ON public.invitations FOR ALL TO authenticated
+USING (
+  tenant_id = get_user_tenant(auth.uid())
+  AND has_role(auth.uid(), 'gestor')
+  AND team_id IN (SELECT team_id FROM team_members WHERE user_id = auth.uid())
+)
+WITH CHECK (
+  tenant_id = get_user_tenant(auth.uid())
+  AND has_role(auth.uid(), 'gestor')
+  AND team_id IN (SELECT team_id FROM team_members WHERE user_id = auth.uid())
+);
+```
 
----
+### 2. UI — update `revokeInvite` to set audit fields
 
-## Fase 2 — Dashboards e Metas
+In `AccessManagement.tsx`, change the `revokeInvite` function to also write `revoked_at` and `revoked_by`:
 
-### 2.1 Dashboards de Vendas
-- 4 dashboards configuráveis:
-  1. Vendas Previstas SaaS
-  2. Vendas Previstas Implantação
-  3. Vendas Realizadas SaaS
-  4. Vendas Realizadas Implantação
-- Opção de reduzir para 2 dashboards (para empresas com uma única linha de receita)
-- Gráficos de barras, funil e evolução temporal
-- Filtros por período, time e vendedor
+```typescript
+const revokeInvite = async (id: string) => {
+  const { error } = await supabase
+    .from("invitations")
+    .update({ status: "revoked", revoked_at: new Date().toISOString(), revoked_by: user?.id })
+    .eq("id", id);
+  // ... toast + fetchAll
+};
+```
 
-### 2.2 Sistema de Metas
-- Gestor/Diretor define metas individuais por vendedor (input manual)
-- Vendedor visualiza: sua meta, vendas realizadas e vendas previstas
-- Gestor vê metas e progresso do seu time
-- Diretor vê metas e progresso de todos os times
-- Barra de progresso visual da meta
+No other files or flows are changed.
 
----
+## Test Checklist
 
-## Fase 3 — Comunicação e Refinamentos
-
-### 3.1 E-mail em Bloco
-- Seleção múltipla de contatos na visualização em lista
-- Botão "Enviar e-mail em bloco"
-- Editor de e-mail com campo de personalização (ex: `{{nome_contato}}`)
-- Envio via serviço de e-mail (Resend ou SendGrid — a definir)
-
-### 3.2 Gestão de Times
-- Criação de times (Time de Vendas A, B, Prospecção, etc.)
-- Atribuição de usuários a times
-- Gestor vinculado a um ou mais times
-
----
-
-## Requisitos Técnicos (Backend)
-- **Supabase** para autenticação, banco de dados e RLS (Row Level Security)
-- Tabelas separadas para roles (segurança contra escalação de privilégios)
-- RLS por empresa (tenant isolation) e por nível de acesso
-- Edge Function para consulta de CNPJ na Receita Federal
-- Edge Function para envio de e-mails em bloco
+1. **Director lists invitations** — Go to Settings → Gestão de Acessos → Convites tab; confirm pending invitations load.
+2. **Revoke works** — Click the revoke (X) button on a pending invite; confirm status changes to "Revogado" and the action buttons update.
+3. **Revoked invite unusable** — Copy the revoked invite's link and open in incognito; confirm signup with that token does NOT link to the tenant (current Auth.tsx ignores tokens entirely, so this is already blocked).
+4. **Manager can revoke own team invites** — Log in as Manager; confirm they can see and revoke invitations for their team only.
 
