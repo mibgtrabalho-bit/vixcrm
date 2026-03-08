@@ -299,8 +299,12 @@ export function ManagerDashboard({ filters }: ManagerDashboardProps) {
                     <TableRow key={s.userId}>
                       <TableCell className="text-sm font-medium">{s.name}</TableCell>
                       <TableCell className="text-sm text-right">{s.opps}</TableCell>
-                      <TableCell className="text-sm text-right">{formatCurrency(s.pipelineVal)}</TableCell>
+                      <TableCell className="text-sm text-right">
+                        <div>{formatCurrency(s.pipelineVal)}</div>
+                        <div className="text-xs text-muted-foreground">SaaS {formatCurrency(s.pipelineSaas)}</div>
+                      </TableCell>
                       <TableCell className="text-sm text-right">{formatCurrency(s.closedVal)}</TableCell>
+                      <TableCell className="text-sm text-right">{formatCurrency(s.closedSaas)}</TableCell>
                       <TableCell className="text-sm text-right">{s.conversion.toFixed(1).replace(".", ",")}%</TableCell>
                       <TableCell className="text-sm text-right">{formatCurrency(s.avgTicket)}</TableCell>
                     </TableRow>
