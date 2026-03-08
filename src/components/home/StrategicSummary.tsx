@@ -259,13 +259,14 @@ export function StrategicSummary({ teamFilter }: StrategicSummaryProps) {
     return () => { cancelled = true; };
   }, [teamFilter, role, user?.id]);
 
-  const { data: values } = useQuery({
+  const { data: values, isLoading } = useQuery({
     queryKey: ["home-strategic-summary", filterUserIds, role, teamFilter, monthStr],
     queryFn: () => fetchSummaryData(filterUserIds, teamFilter, role, user?.id ?? null, monthStr),
     enabled: !!profile?.tenant_id && filterResolved,
     staleTime: 30_000,
-    initialData: EMPTY,
   });
+
+  const loading = isLoading || !filterResolved;
 
   const groups = buildGroups(role, values);
   const summaryLabel = getSummaryLabel(role);
