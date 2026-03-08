@@ -96,6 +96,8 @@ export function AccessManagement() {
   const [inviteLoading, setInviteLoading] = useState(false);
   const [copiedToken, setCopiedToken] = useState<string | null>(null);
   const [generatedLink, setGeneratedLink] = useState<string | null>(null);
+  const [tenantCnpj, setTenantCnpj] = useState<string>("");
+  const [cnpjSaved, setCnpjSaved] = useState(false);
 
   const fetchAll = useCallback(async () => {
     if (!profile?.tenant_id) return;
