@@ -1,5 +1,5 @@
 import { Draggable } from "@hello-pangea/dnd";
-import { Building2, DollarSign, Calendar, User, Users } from "lucide-react";
+import { Building2, DollarSign, Calendar, User, Users, Clock } from "lucide-react";
 
 export interface Opportunity {
   id: string;
@@ -18,6 +18,8 @@ export interface Opportunity {
   company_id?: string;
   assigned_to?: string;
   first_payment_date?: string;
+  created_at?: string;
+  last_activity_at?: string;
 }
 
 interface Props {
@@ -98,6 +100,26 @@ export function OpportunityCard({ opportunity, index, onClick }: Props) {
                 {new Date(opportunity.expected_close_date).toLocaleDateString("pt-BR", {
                   day: "2-digit",
                   month: "short",
+                })}
+              </span>
+            </div>
+          )}
+
+          {opportunity.created_at && (
+            <div className="mt-1.5 flex items-center gap-1 text-[11px] text-muted-foreground/70">
+              <Clock className="h-3 w-3" />
+              <span>
+                Criado em{" "}
+                {new Date(opportunity.created_at).toLocaleDateString("pt-BR", {
+                  day: "2-digit",
+                  month: "2-digit",
+                  year: "2-digit",
+                  timeZone: "America/Sao_Paulo",
+                })}{" "}
+                {new Date(opportunity.created_at).toLocaleTimeString("pt-BR", {
+                  hour: "2-digit",
+                  minute: "2-digit",
+                  timeZone: "America/Sao_Paulo",
                 })}
               </span>
             </div>
