@@ -90,7 +90,7 @@ export function KanbanBoard({ teamFilter = "all" }: KanbanBoardProps) {
     let query = supabase
       .from("opportunities")
       .select(`
-        id, title, value, value_implantacao, value_saas, stage, expected_close_date, notes, assigned_to, contact_id, company_id, first_payment_date,
+        id, title, value, value_implantacao, value_saas, stage, expected_close_date, notes, assigned_to, contact_id, company_id, first_payment_date, created_at, last_activity_at,
         contacts:contact_id(name),
         companies:company_id(name)
       `)
