@@ -63,6 +63,7 @@ export default function Dashboard() {
       </PageHeader>
 
       <StrategicSummary teamFilter={teamFilter} />
+      <PriorityBlock teamFilter={teamFilter} />
 
       {viewMode === "kanban" ? (
         <KanbanBoard key={refreshKey} teamFilter={teamFilter} />
