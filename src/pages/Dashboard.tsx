@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -16,6 +16,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useQuery } from "@tanstack/react-query";
 import { DollarSign, TrendingUp, BarChart3, Repeat, Settings2, Zap, Target } from "lucide-react";
+import { PipelineTeamFilter } from "@/components/pipeline/PipelineTeamFilter";
 
 type WidgetId = "vendas_realizadas" | "vendas_projetadas" | "conversao" | "venda_saas" | "venda_implantacao" | "arr";
 
@@ -38,11 +39,44 @@ const ALL_WIDGETS: WidgetDef[] = [
 const STORAGE_KEY = "dashboard_widgets";
 const DEFAULT_WIDGETS: WidgetId[] = ["vendas_realizadas", "vendas_projetadas", "conversao", "arr"];
 
-async function fetchDashboardStats() {
-  const { data: opps } = await supabase
+async function resolveFilterUserIds(filterValue: string): Promise<string[] | null> {
+  if (filterValue === "all") return null;
+
+  if (filterValue.startsWith("user:")) {
+    return [filterValue.slice(5)];
+  }
+
+  // team filter
+  const teamId = filterValue.startsWith("team:") ? filterValue.slice(5) : filterValue;
+  const { data } = await supabase
+    .from("team_members")
+    .select("user_id")
+    .eq("team_id", teamId);
+
+  const ids = (data || []).map((m) => m.user_id);
+  return ids.length > 0 ? ids : [];
+}
+
+async function fetchDashboardStats(filterUserIds: string[] | null) {
+  let query = supabase
     .from("opportunities")
     .select("id, value, value_implantacao, value_saas, first_payment_date, stage");
 
+  if (filterUserIds !== null) {
+    if (filterUserIds.length === 0) {
+      return {
+        vendas_realizadas: 0,
+        vendas_projetadas: 0,
+        conversao: 0,
+        venda_saas: 0,
+        venda_implantacao: 0,
+        arr: 0,
+      } as Record<WidgetId, number>;
+    }
+    query = query.in("assigned_to", filterUserIds);
+  }
+
+  const { data: opps } = await query;
   const opportunities = opps || [];
 
   const fechados = opportunities.filter((o) => o.stage === "fechado");
@@ -51,7 +85,6 @@ async function fetchDashboardStats() {
   const vendasRealizadas = fechados.reduce((s, o) => s + (Number(o.value) || 0), 0);
   const vendasProjetadas = negociacao.reduce((s, o) => s + (Number(o.value) || 0), 0);
 
-  // Conversão: ONLY current stage = fechado / total
   const total = opportunities.length;
   const closedCount = fechados.length;
   const conversao = total > 0 ? (closedCount / total) * 100 : 0;
@@ -59,7 +92,6 @@ async function fetchDashboardStats() {
   const vendaSaas = fechados.reduce((s, o) => s + (Number(o.value_saas) || 0), 0);
   const vendaImpl = fechados.reduce((s, o) => s + (Number(o.value_implantacao) || 0), 0);
 
-  // ARR
   const currentYear = new Date().getFullYear();
   const endOfYear = new Date(currentYear, 11, 31);
   let arr = 0;
@@ -89,6 +121,9 @@ async function fetchDashboardStats() {
 export default function Dashboard() {
   const { profile } = useAuth();
   const [configOpen, setConfigOpen] = useState(false);
+  const [teamFilter, setTeamFilter] = useState("all");
+  const [filterUserIds, setFilterUserIds] = useState<string[] | null>(null);
+  const [filterResolved, setFilterResolved] = useState(false);
   const [selectedWidgets, setSelectedWidgets] = useState<WidgetId[]>(() => {
     try {
       const saved = localStorage.getItem(STORAGE_KEY);
@@ -99,10 +134,23 @@ export default function Dashboard() {
   });
   const [tempSelection, setTempSelection] = useState<WidgetId[]>([]);
 
+  // Resolve filter to user IDs
+  useEffect(() => {
+    let cancelled = false;
+    setFilterResolved(false);
+    resolveFilterUserIds(teamFilter).then((ids) => {
+      if (!cancelled) {
+        setFilterUserIds(ids);
+        setFilterResolved(true);
+      }
+    });
+    return () => { cancelled = true; };
+  }, [teamFilter]);
+
   const { data: values } = useQuery({
-    queryKey: ["dashboard-stats"],
-    queryFn: fetchDashboardStats,
-    enabled: !!profile?.tenant_id,
+    queryKey: ["dashboard-stats", filterUserIds],
+    queryFn: () => fetchDashboardStats(filterUserIds),
+    enabled: !!profile?.tenant_id && filterResolved,
     staleTime: 0,
     refetchOnWindowFocus: true,
     initialData: {
@@ -144,6 +192,7 @@ export default function Dashboard() {
   return (
     <AppLayout>
       <PageHeader title="Dashboard" description="Visão geral do seu pipeline de vendas">
+        <PipelineTeamFilter value={teamFilter} onChange={setTeamFilter} />
         <Button variant="outline" size="sm" onClick={openConfig}>
           <Settings2 className="h-4 w-4 mr-1" />
           Configurar
