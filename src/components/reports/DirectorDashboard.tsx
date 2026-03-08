@@ -34,8 +34,9 @@ export function DirectorDashboard({ filters }: DirectorDashboardProps) {
       ]);
       const roleMap = Object.fromEntries((roles || []).map((r: any) => [r.user_id, r.role]));
       const profileMap = Object.fromEntries((profiles || []).map((p: any) => [p.user_id, p.full_name]));
-      const sellerIds = [...new Set((members || []).map((m: any) => m.user_id))].filter((id) => roleMap[id] === "vendedor");
-      return { teams: teams || [], members: members || [], profileMap, roleMap, sellerIds };
+      const allUserIds = [...new Set((members || []).map((m: any) => m.user_id))];
+      const sellerIds = allUserIds.filter((id) => roleMap[id] === "vendedor");
+      return { teams: teams || [], members: members || [], profileMap, roleMap, sellerIds, allUserIds };
     },
     enabled: !!profile?.tenant_id,
   });
