@@ -462,7 +462,9 @@ export function AccessManagement() {
                         )}
                       </TableCell>
                       <TableCell>
+                        <div className="flex gap-1">
                         {u.user_id !== user?.id && (isDirector || (isManager && u.role !== 'gestor' && u.role !== 'diretor')) && (
+                          <>
                           <AlertDialog>
                             <AlertDialogTrigger asChild>
                               <Button variant="ghost" size="icon" className="h-8 w-8">
@@ -486,7 +488,36 @@ export function AccessManagement() {
                               </AlertDialogFooter>
                             </AlertDialogContent>
                           </AlertDialog>
+                          {canDeleteUser(u.role) && (
+                            <AlertDialog>
+                              <AlertDialogTrigger asChild>
+                                <Button variant="ghost" size="icon" className="h-8 w-8" title="Excluir acesso" disabled={deleteLoading}>
+                                  <Trash2 className="h-4 w-4 text-muted-foreground hover:text-destructive" />
+                                </Button>
+                              </AlertDialogTrigger>
+                              <AlertDialogContent>
+                                <AlertDialogHeader>
+                                  <AlertDialogTitle>Excluir acesso de {u.full_name}?</AlertDialogTitle>
+                                  <AlertDialogDescription>
+                                    Esta ação é permanente. O usuário não poderá mais acessar o sistema.
+                                    {u.is_active && " Oportunidades e contatos serão reatribuídos automaticamente para outros vendedores do mesmo time."}
+                                  </AlertDialogDescription>
+                                </AlertDialogHeader>
+                                <AlertDialogFooter>
+                                  <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                                  <AlertDialogAction
+                                    onClick={() => deleteUserAccess(u.user_id, u.full_name)}
+                                    className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                                  >
+                                    Excluir acesso
+                                  </AlertDialogAction>
+                                </AlertDialogFooter>
+                              </AlertDialogContent>
+                            </AlertDialog>
+                          )}
+                          </>
                         )}
+                        </div>
                       </TableCell>
                     </TableRow>
                   ))
