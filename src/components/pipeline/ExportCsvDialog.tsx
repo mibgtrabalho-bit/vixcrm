@@ -327,14 +327,8 @@ export function ExportCsvDialog({ open, onOpenChange, currentFilter }: ExportCsv
     }
   };
 
-  // Seller: direct export
-  if (role === "vendedor") {
-    if (open) {
-      handleExport(false);
-      onOpenChange(false);
-    }
-    return null;
-  }
+  // Seller: no dialog, handled by useEffect
+  if (role === "vendedor") return null;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
