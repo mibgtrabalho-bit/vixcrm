@@ -374,7 +374,7 @@ export function AccessManagement() {
                         )}
                       </TableCell>
                       <TableCell>
-                        {u.user_id !== user?.id && (
+                        {u.user_id !== user?.id && (isDirector || (isManager && u.role !== 'gestor' && u.role !== 'diretor')) && (
                           <AlertDialog>
                             <AlertDialogTrigger asChild>
                               <Button variant="ghost" size="icon" className="h-8 w-8">
