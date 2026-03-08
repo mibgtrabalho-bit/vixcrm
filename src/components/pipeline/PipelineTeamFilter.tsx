@@ -37,6 +37,8 @@ export function parsePipelineFilter(value: string): PipelineFilterValue {
 interface PipelineTeamFilterProps {
   value: string;
   onChange: (value: string) => void;
+  /** When true, only vendedor-role users appear as individual selectable entries */
+  sellersOnly?: boolean;
 }
 
 export function PipelineTeamFilter({ value, onChange }: PipelineTeamFilterProps) {
