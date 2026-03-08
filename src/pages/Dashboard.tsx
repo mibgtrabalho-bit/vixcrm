@@ -9,6 +9,7 @@ import { CreateOpportunityDialog } from "@/components/pipeline/CreateOpportunity
 import { PipelineTeamFilter } from "@/components/pipeline/PipelineTeamFilter";
 import { ExportCsvDialog } from "@/components/pipeline/ExportCsvDialog";
 import { Button } from "@/components/ui/button";
+import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 import { useAuth } from "@/contexts/AuthContext";
 import { Plus, LayoutGrid, List, Download } from "lucide-react";
 
