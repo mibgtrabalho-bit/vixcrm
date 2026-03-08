@@ -210,7 +210,7 @@ export function AccessManagement() {
   const revokeInvite = async (id: string) => {
     const { error } = await supabase
       .from("invitations")
-      .update({ status: "revoked" })
+      .update({ status: "revoked", revoked_at: new Date().toISOString(), revoked_by: user?.id } as any)
       .eq("id", id);
     if (error) {
       toast({ title: "Erro", description: error.message, variant: "destructive" });
