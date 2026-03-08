@@ -83,7 +83,7 @@ export function SellerDashboard({ filters }: SellerDashboardProps) {
         .lte("created_at", end.toISOString());
 
       if (filters.stage !== "all") {
-        q = q.eq("stage", filters.stage);
+        q = q.eq("stage", filters.stage as any);
       }
 
       const { data } = await q;
