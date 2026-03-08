@@ -256,7 +256,7 @@ export function AccessManagement() {
   };
 
   const copyLink = (token: string) => {
-    const link = `${window.location.origin}/auth?invite=${token}`;
+    const link = getInviteLink(token);
     navigator.clipboard.writeText(link);
     setCopiedToken(token);
     toast({ title: "Link copiado!" });
