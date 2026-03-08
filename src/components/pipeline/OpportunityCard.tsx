@@ -86,7 +86,7 @@ export function OpportunityCard({ opportunity, index, onClick }: Props) {
               {opportunity.value_saas != null && opportunity.value_saas > 0 && (
                 <span className="flex items-center gap-1">
                   <DollarSign className="h-3 w-3 text-primary" />
-                  SaaS: {fmt.format(opportunity.value_saas)}/mês
+                  SaaS: {fmt.format(opportunity.value_saas)}
                 </span>
               )}
             </div>
