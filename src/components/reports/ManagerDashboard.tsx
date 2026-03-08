@@ -269,7 +269,8 @@ export function ManagerDashboard({ filters }: ManagerDashboardProps) {
               <div key={s.id} className="rounded-lg border border-border/60 p-3 text-center">
                 <p className="text-xs text-muted-foreground truncate">{s.label}</p>
                 <p className="text-lg font-bold mt-1">{stageMap[s.id]?.count ?? 0}</p>
-                <p className="text-xs text-muted-foreground">{formatCurrency(stageMap[s.id]?.value ?? 0)}</p>
+                <p className="text-xs text-muted-foreground">Setup {formatCurrency(stageMap[s.id]?.setup ?? 0)}</p>
+                <p className="text-xs text-muted-foreground">SaaS/mês {formatCurrency(stageMap[s.id]?.saas ?? 0)}</p>
               </div>
             ))}
           </div>
