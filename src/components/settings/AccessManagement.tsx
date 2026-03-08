@@ -107,6 +107,7 @@ export function AccessManagement() {
   const [generatedLink, setGeneratedLink] = useState<string | null>(null);
   const [tenantCnpj, setTenantCnpj] = useState<string>("");
   const [cnpjSaved, setCnpjSaved] = useState(false);
+  const [deleteLoading, setDeleteLoading] = useState(false);
 
   const fetchAll = useCallback(async () => {
     if (!profile?.tenant_id) return;
