@@ -20,6 +20,7 @@ export default function Pipeline() {
   return (
     <AppLayout>
       <PageHeader title="Pipeline" description="Gerencie suas oportunidades de venda">
+        <PipelineTeamFilter value={teamFilter} onChange={setTeamFilter} />
         <div className="flex items-center gap-0.5 rounded-lg border border-border/60 bg-muted/50 p-0.5">
           <button
             onClick={() => setViewMode("kanban")}
