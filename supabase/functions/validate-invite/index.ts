@@ -56,9 +56,9 @@ Deno.serve(async (req) => {
       role: invite.role,
       team_id: invite.team_id,
       tenant_id: invite.tenant_id,
-      team_name: (invite.teams as any)?.name || null,
-      tenant_name: (invite.tenants as any)?.name || null,
-      tenant_cnpj: (invite.tenants as any)?.cnpj || null,
+      team_name: (invite.equipes as any)?.name || null,
+      tenant_name: (invite.inquilinos as any)?.name || null,
+      tenant_cnpj: (invite.inquilinos as any)?.cnpj || null,
     }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });

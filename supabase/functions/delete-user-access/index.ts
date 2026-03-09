@@ -34,14 +34,14 @@ Deno.serve(async (req) => {
 
     // Get caller profile + role
     const { data: callerProfile } = await admin
-      .from("profiles")
+      .from("perfis")
       .select("tenant_id")
       .eq("user_id", caller.id)
       .single();
     if (!callerProfile) return res(403, { error: "Perfil não encontrado" });
 
     const { data: callerRoleRow } = await admin
-      .from("user_roles")
+      .from("funcoes_de_usuario")
       .select("role")
       .eq("user_id", caller.id)
       .single();
@@ -54,7 +54,7 @@ Deno.serve(async (req) => {
     // ── DELETE INVITE ──
     if (target_invite_id) {
       const { data: inv } = await admin
-        .from("invitations")
+        .from("convites")
         .select("id, tenant_id, team_id, status")
         .eq("id", target_invite_id)
         .single();
@@ -64,7 +64,7 @@ Deno.serve(async (req) => {
       // Manager can only delete invites for their teams
       if (callerRole === "gestor") {
         const { data: myTeams } = await admin
-          .from("team_members")
+          .from("membros_da_equipe")
           .select("team_id")
           .eq("user_id", caller.id);
         const myTeamIds = new Set((myTeams || []).map((t: any) => t.team_id));
@@ -75,7 +75,7 @@ Deno.serve(async (req) => {
       // Revoke if pending, or hard delete if already revoked/accepted
       if (inv.status === "pending") {
         await admin
-          .from("invitations")
+          .from("convites")
           .update({
             status: "revoked",
             revoked_at: new Date().toISOString(),
@@ -83,7 +83,7 @@ Deno.serve(async (req) => {
           })
           .eq("id", inv.id);
       } else {
-        await admin.from("invitations").delete().eq("id", inv.id);
+        await admin.from("convites").delete().eq("id", inv.id);
       }
       return res(200, { success: true, action: "invite_deleted" });
     }
@@ -95,7 +95,7 @@ Deno.serve(async (req) => {
 
     // Get target profile + role
     const { data: targetProfile } = await admin
-      .from("profiles")
+      .from("perfis")
       .select("tenant_id, user_id, full_name")
       .eq("user_id", target_user_id)
       .single();
@@ -104,7 +104,7 @@ Deno.serve(async (req) => {
     }
 
     const { data: targetRoleRow } = await admin
-      .from("user_roles")
+      .from("funcoes_de_usuario")
       .select("role")
       .eq("user_id", target_user_id)
       .single();
@@ -127,14 +127,14 @@ Deno.serve(async (req) => {
 
     // Find target's team
     const { data: targetTeams } = await admin
-      .from("team_members")
+      .from("membros_da_equipe")
       .select("team_id")
       .eq("user_id", target_user_id);
     const targetTeamIds = (targetTeams || []).map((t: any) => t.team_id);
 
     // Get active opportunities assigned to target
     const { data: opps } = await admin
-      .from("opportunities")
+      .from("oportunidades")
       .select("id, stage")
       .eq("assigned_to", target_user_id)
       .eq("tenant_id", callerProfile.tenant_id)
@@ -142,7 +142,7 @@ Deno.serve(async (req) => {
 
     // Get contacts created by target
     const { data: contacts } = await admin
-      .from("contacts")
+      .from("contatos")
       .select("id")
       .eq("created_by", target_user_id)
       .eq("tenant_id", callerProfile.tenant_id)
@@ -156,7 +156,7 @@ Deno.serve(async (req) => {
     let availableSellers: { user_id: string; opp_count: number }[] = [];
     if (targetTeamIds.length > 0) {
       const { data: teamMembers } = await admin
-        .from("team_members")
+        .from("membros_da_equipe")
         .select("user_id")
         .in("team_id", targetTeamIds)
         .neq("user_id", target_user_id);
@@ -166,14 +166,14 @@ Deno.serve(async (req) => {
       // Filter to active sellers only
       for (const uid of candidateIds) {
         const { data: prof } = await admin
-          .from("profiles")
+          .from("perfis")
           .select("is_active")
           .eq("user_id", uid)
           .single();
         if (!prof?.is_active) continue;
 
         const { data: roleRow } = await admin
-          .from("user_roles")
+          .from("funcoes_de_usuario")
           .select("role")
           .eq("user_id", uid)
           .single();
@@ -181,7 +181,7 @@ Deno.serve(async (req) => {
 
         // Count active opportunities
         const { count } = await admin
-          .from("opportunities")
+          .from("oportunidades")
           .select("id", { count: "exact", head: true })
           .eq("assigned_to", uid)
           .eq("tenant_id", callerProfile.tenant_id)
@@ -199,7 +199,7 @@ Deno.serve(async (req) => {
       for (let i = 0; i < opps!.length; i++) {
         const seller = availableSellers[i % availableSellers.length];
         await admin
-          .from("opportunities")
+          .from("oportunidades")
           .update({ assigned_to: seller.user_id })
           .eq("id", opps![i].id);
         seller.opp_count++;
@@ -219,17 +219,17 @@ Deno.serve(async (req) => {
       for (let i = 0; i < contacts!.length; i++) {
         const seller = contactSellers[i % contactSellers.length];
         await admin
-          .from("contacts")
+          .from("contatos")
           .update({ created_by: seller.user_id })
           .eq("id", contacts![i].id);
       }
     }
 
     // Soft delete: deactivate profile + remove auth access
-    await admin.from("profiles").update({ is_active: false }).eq("user_id", target_user_id);
+    await admin.from("perfis").update({ is_active: false }).eq("user_id", target_user_id);
 
     // Remove from teams
-    await admin.from("team_members").delete().eq("user_id", target_user_id);
+    await admin.from("membros_da_equipe").delete().eq("user_id", target_user_id);
 
     // Disable auth login by updating user metadata to mark as deleted
     // and setting a banned status
@@ -241,7 +241,7 @@ Deno.serve(async (req) => {
     const { data: targetAuthUser } = await admin.auth.admin.getUserById(target_user_id);
     if (targetAuthUser?.user?.email) {
       await admin
-        .from("invitations")
+        .from("convites")
         .update({
           status: "revoked",
           revoked_at: new Date().toISOString(),
