@@ -24,8 +24,8 @@ Deno.serve(async (req) => {
     const supabase = createClient(supabaseUrl, serviceKey);
 
     const { data: invite, error } = await supabase
-      .from("invitations")
-      .select("id, email, role, team_id, tenant_id, status, expires_at, teams:team_id(name), tenants:tenant_id(name, cnpj)")
+      .from("convites")
+      .select("id, email, role, team_id, tenant_id, status, expires_at, equipes:team_id(name), inquilinos:tenant_id(name, cnpj)")
       .eq("token", token)
       .single();
 
