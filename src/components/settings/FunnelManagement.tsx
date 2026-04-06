@@ -254,6 +254,17 @@ export function FunnelManagement() {
       toast({ title: "O funil padrão não pode ser desativado", variant: "destructive" });
       return;
     }
+    // Check if funnel has active opportunities before deactivating
+    if (funnel.is_active) {
+      const totalOpps = funnel.stages.reduce((sum, s) => sum + (s.opportunity_count || 0), 0);
+      if (totalOpps > 0) {
+        toast({
+          title: "Este funil possui oportunidades ativas e não pode ser desativado.",
+          variant: "destructive",
+        });
+        return;
+      }
+    }
     setSaving(true);
     const { error } = await supabase
       .from("funnels")
