@@ -4,6 +4,7 @@ import { PageHeader } from "@/components/layout/PageHeader";
 import { AccessManagement } from "@/components/settings/AccessManagement";
 import { TeamManagement } from "@/components/settings/TeamManagement";
 import { FunnelManagement } from "@/components/settings/FunnelManagement";
+import { useAuth } from "@/contexts/AuthContext";
 import { Users, GitBranch, ShieldCheck, ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
@@ -37,7 +38,13 @@ const sectionComponents: Record<Exclude<SettingsSection, "home">, React.FC> = {
 };
 
 export default function SettingsPage() {
+  const { role } = useAuth();
   const [activeSection, setActiveSection] = useState<SettingsSection>("home");
+
+  const visibleSections = sections.filter((s) => {
+    if (s.id === "funnels" && role !== "diretor") return false;
+    return true;
+  });
 
   if (activeSection !== "home") {
     const ActiveComponent = sectionComponents[activeSection];
@@ -63,7 +70,7 @@ export default function SettingsPage() {
       <PageHeader title="Configurações" description="Gerencie sua conta e empresa" />
       <div className="p-6">
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5 max-w-4xl">
-          {sections.map((section) => {
+          {visibleSections.map((section) => {
             const Icon = section.icon;
             return (
               <button
