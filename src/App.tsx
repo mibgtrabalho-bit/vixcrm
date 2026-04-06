@@ -67,7 +67,7 @@ function AppRoutes() {
       <Route path="/companies" element={<ProtectedRoute><Companies /></ProtectedRoute>} />
       <Route path="/goals" element={<ManagerOrDirectorRoute><Goals /></ManagerOrDirectorRoute>} />
       <Route path="/reports" element={<ProtectedRoute><Reports /></ProtectedRoute>} />
-      <Route path="/settings" element={<ProtectedRoute><SettingsPage /></ProtectedRoute>} />
+      <Route path="/settings" element={<ManagerOrDirectorRoute><SettingsPage /></ManagerOrDirectorRoute>} />
       <Route path="*" element={<NotFound />} />
     </Routes>
   );
