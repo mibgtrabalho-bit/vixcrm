@@ -69,6 +69,8 @@ export function EditOpportunityDialog({ open, onOpenChange, opportunity, onUpdat
   const [loading, setLoading] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [expectedCloseDate, setExpectedCloseDate] = useState<Date>();
+  const [proximaAcaoTipo, setProximaAcaoTipo] = useState("");
+  const [proximaAcaoData, setProximaAcaoData] = useState<Date>();
 
   const { user, profile, role } = useAuth();
   const queryClient = useQueryClient();
