@@ -49,6 +49,21 @@ const inactivityStyles = {
   critical: "border-red-400/70 bg-red-50/60 dark:bg-red-950/20 dark:border-red-500/40",
 };
 
+const NEXT_ACTION_ICONS: Record<string, React.ElementType> = {
+  "Ligação": Phone,
+  "E-mail": Mail,
+  "Reunião": CalendarCheck,
+  "Proposta": FileText,
+  "Outro": MoreHorizontal,
+};
+
+function isNextActionOverdue(dateStr: string): boolean {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const d = new Date(dateStr + "T00:00:00");
+  return d <= today;
+}
+
 export function OpportunityCard({ opportunity, index, onClick }: Props) {
   const state = getInactivityState(opportunity);
 
