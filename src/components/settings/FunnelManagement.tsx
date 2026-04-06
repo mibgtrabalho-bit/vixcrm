@@ -75,6 +75,9 @@ function slugify(name: string): string {
     .replace(/^_|_$/g, "");
 }
 
+const ALLOWED_FUNNEL_NAMES = ["Prospecção", "Vendas", "Farming"];
+const MAX_FUNNELS = 3;
+
 /* ────── Component ────── */
 export function FunnelManagement() {
   const { role, profile } = useAuth();
