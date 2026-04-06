@@ -343,6 +343,8 @@ export type Database = {
           id: string
           last_activity_at: string | null
           notes: string | null
+          proxima_acao_data: string | null
+          proxima_acao_tipo: string | null
           stage: Database["public"]["Enums"]["pipeline_stage"]
           tenant_id: string
           title: string
@@ -367,6 +369,8 @@ export type Database = {
           id?: string
           last_activity_at?: string | null
           notes?: string | null
+          proxima_acao_data?: string | null
+          proxima_acao_tipo?: string | null
           stage?: Database["public"]["Enums"]["pipeline_stage"]
           tenant_id: string
           title: string
@@ -391,6 +395,8 @@ export type Database = {
           id?: string
           last_activity_at?: string | null
           notes?: string | null
+          proxima_acao_data?: string | null
+          proxima_acao_tipo?: string | null
           stage?: Database["public"]["Enums"]["pipeline_stage"]
           tenant_id?: string
           title?: string
