@@ -654,12 +654,25 @@ export function FunnelManagement() {
             <DialogTitle>{editingFunnel ? "Renomear Funil" : "Novo Funil"}</DialogTitle>
           </DialogHeader>
           <form onSubmit={handleSaveFunnel} className="space-y-4">
-            <Input
-              placeholder="Nome do funil"
-              value={funnelName}
-              onChange={(e) => setFunnelName(e.target.value)}
-              autoFocus
-            />
+            {editingFunnel ? (
+              <Input
+                placeholder="Nome do funil"
+                value={funnelName}
+                onChange={(e) => setFunnelName(e.target.value)}
+                autoFocus
+              />
+            ) : (
+              <Select value={funnelName} onValueChange={setFunnelName}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecione o tipo de funil" />
+                </SelectTrigger>
+                <SelectContent>
+                  {availableFunnelNames.map((name) => (
+                    <SelectItem key={name} value={name}>{name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
             <div className="flex justify-end gap-2">
               <Button type="button" variant="outline" onClick={() => setFunnelDialogOpen(false)}>
                 Cancelar
