@@ -171,6 +171,10 @@ export function FunnelManagement() {
     setFunnelDialogOpen(true);
   };
 
+  const usedFunnelNames = funnels.map((f) => f.name);
+  const availableFunnelNames = ALLOWED_FUNNEL_NAMES.filter((n) => !usedFunnelNames.includes(n));
+  const canCreateFunnel = funnels.length < MAX_FUNNELS && availableFunnelNames.length > 0;
+
   const openEditFunnel = (funnel: Funnel) => {
     setEditingFunnel(funnel);
     setFunnelName(funnel.name);
