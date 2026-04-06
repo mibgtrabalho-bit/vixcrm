@@ -69,6 +69,8 @@ export function EditOpportunityDialog({ open, onOpenChange, opportunity, onUpdat
   const [loading, setLoading] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [expectedCloseDate, setExpectedCloseDate] = useState<Date>();
+  const [proximaAcaoTipo, setProximaAcaoTipo] = useState("");
+  const [proximaAcaoData, setProximaAcaoData] = useState<Date>();
 
   const { user, profile, role } = useAuth();
   const queryClient = useQueryClient();
@@ -88,6 +90,8 @@ export function EditOpportunityDialog({ open, onOpenChange, opportunity, onUpdat
       setAssignedTo(opportunity.assigned_to || "");
       setExpectedCloseDate(opportunity.expected_close_date ? new Date(opportunity.expected_close_date) : undefined);
       setFirstPaymentDate(opportunity.first_payment_date ? new Date(opportunity.first_payment_date) : undefined);
+      setProximaAcaoTipo((opportunity as any).proxima_acao_tipo || "");
+      setProximaAcaoData((opportunity as any).proxima_acao_data ? new Date((opportunity as any).proxima_acao_data) : undefined);
 
       // Fetch lookups
       supabase.from("contacts").select("id, name").then(({ data }) => setContacts(data || []));
@@ -122,6 +126,8 @@ export function EditOpportunityDialog({ open, onOpenChange, opportunity, onUpdat
       company_id: companyId || null,
       expected_close_date: expectedCloseDate ? format(expectedCloseDate, "yyyy-MM-dd") : null,
       first_payment_date: firstPaymentDate ? format(firstPaymentDate, "yyyy-MM-dd") : null,
+      proxima_acao_tipo: proximaAcaoTipo || null,
+      proxima_acao_data: proximaAcaoData ? format(proximaAcaoData, "yyyy-MM-dd") : null,
     };
 
     if (canChangeOwner && assignedTo) {
@@ -266,6 +272,34 @@ export function EditOpportunityDialog({ open, onOpenChange, opportunity, onUpdat
           <div>
             <Label htmlFor="edit-notes">Observações</Label>
             <Textarea id="edit-notes" value={notes} onChange={(e) => setNotes(e.target.value)} rows={2} />
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <Label>Tipo da Próxima Ação</Label>
+              <Select value={proximaAcaoTipo} onValueChange={setProximaAcaoTipo}>
+                <SelectTrigger><SelectValue placeholder="Nenhuma" /></SelectTrigger>
+                <SelectContent>
+                  {["Ligação", "E-mail", "Reunião", "Proposta", "Outro"].map((t) => (
+                    <SelectItem key={t} value={t}>{t}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label>Data da Próxima Ação</Label>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button variant="outline" className={cn("w-full justify-start text-left font-normal", !proximaAcaoData && "text-muted-foreground")}>
+                    <CalendarIcon className="mr-2 h-4 w-4" />
+                    {proximaAcaoData ? format(proximaAcaoData, "dd/MM/yyyy") : "Selecione..."}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <Calendar mode="single" selected={proximaAcaoData} onSelect={setProximaAcaoData} locale={ptBR} className="p-3 pointer-events-auto" />
+                </PopoverContent>
+              </Popover>
+            </div>
           </div>
 
           <div className="flex justify-between gap-2 pt-2">

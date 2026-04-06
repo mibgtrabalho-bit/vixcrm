@@ -1,5 +1,5 @@
 import { Draggable } from "@hello-pangea/dnd";
-import { Building2, DollarSign, Calendar, User, Users, Clock } from "lucide-react";
+import { Building2, DollarSign, Calendar, User, Users, Clock, AlertTriangle, Phone, Mail, CalendarCheck, FileText, MoreHorizontal } from "lucide-react";
 
 export interface Opportunity {
   id: string;
@@ -20,6 +20,8 @@ export interface Opportunity {
   first_payment_date?: string;
   created_at?: string;
   last_activity_at?: string;
+  proxima_acao_tipo?: string | null;
+  proxima_acao_data?: string | null;
 }
 
 interface Props {
@@ -46,6 +48,21 @@ const inactivityStyles = {
   warning: "border-amber-400/70 bg-amber-50/60 dark:bg-amber-950/20 dark:border-amber-500/40",
   critical: "border-red-400/70 bg-red-50/60 dark:bg-red-950/20 dark:border-red-500/40",
 };
+
+const NEXT_ACTION_ICONS: Record<string, React.ElementType> = {
+  "Ligação": Phone,
+  "E-mail": Mail,
+  "Reunião": CalendarCheck,
+  "Proposta": FileText,
+  "Outro": MoreHorizontal,
+};
+
+function isNextActionOverdue(dateStr: string): boolean {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const d = new Date(dateStr + "T00:00:00");
+  return d <= today;
+}
 
 export function OpportunityCard({ opportunity, index, onClick }: Props) {
   const state = getInactivityState(opportunity);
@@ -144,6 +161,21 @@ export function OpportunityCard({ opportunity, index, onClick }: Props) {
                 })}
               </span>
             </div>
+          )}
+
+          {opportunity.proxima_acao_data && (
+            (() => {
+              const overdue = isNextActionOverdue(opportunity.proxima_acao_data);
+              const ActionIcon = (opportunity.proxima_acao_tipo && NEXT_ACTION_ICONS[opportunity.proxima_acao_tipo]) || CalendarCheck;
+              const dateFormatted = new Date(opportunity.proxima_acao_data + "T00:00:00").toLocaleDateString("pt-BR");
+              return (
+                <div className={`mt-1.5 flex items-center gap-1 text-[11px] ${overdue ? "text-destructive font-medium" : "text-muted-foreground"}`}>
+                  {overdue && <AlertTriangle className="h-3 w-3" />}
+                  <ActionIcon className="h-3 w-3" />
+                  <span>{opportunity.proxima_acao_tipo || "Ação"}: {dateFormatted}</span>
+                </div>
+              );
+            })()
           )}
         </div>
       )}
