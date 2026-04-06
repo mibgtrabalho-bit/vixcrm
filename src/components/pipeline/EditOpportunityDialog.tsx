@@ -90,6 +90,8 @@ export function EditOpportunityDialog({ open, onOpenChange, opportunity, onUpdat
       setAssignedTo(opportunity.assigned_to || "");
       setExpectedCloseDate(opportunity.expected_close_date ? new Date(opportunity.expected_close_date) : undefined);
       setFirstPaymentDate(opportunity.first_payment_date ? new Date(opportunity.first_payment_date) : undefined);
+      setProximaAcaoTipo((opportunity as any).proxima_acao_tipo || "");
+      setProximaAcaoData((opportunity as any).proxima_acao_data ? new Date((opportunity as any).proxima_acao_data) : undefined);
 
       // Fetch lookups
       supabase.from("contacts").select("id, name").then(({ data }) => setContacts(data || []));
