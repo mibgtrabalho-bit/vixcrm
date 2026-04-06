@@ -183,7 +183,13 @@ export function FunnelManagement() {
 
   const handleSaveFunnel = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!profile?.tenant_id || !funnelName.trim()) return;
+    if (!profile?.tenant_id || (!editingFunnel && !funnelName.trim())) return;
+    if (!editingFunnel && !ALLOWED_FUNNEL_NAMES.includes(funnelName)) return;
+    if (!editingFunnel && usedFunnelNames.includes(funnelName)) {
+      toast({ title: "Já existe um funil com este nome", variant: "destructive" });
+      setSaving(false);
+      return;
+    }
     setSaving(true);
 
     if (editingFunnel) {
