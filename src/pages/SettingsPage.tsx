@@ -38,7 +38,13 @@ const sectionComponents: Record<Exclude<SettingsSection, "home">, React.FC> = {
 };
 
 export default function SettingsPage() {
+  const { role } = useAuth();
   const [activeSection, setActiveSection] = useState<SettingsSection>("home");
+
+  const visibleSections = sections.filter((s) => {
+    if (s.id === "funnels" && role !== "diretor") return false;
+    return true;
+  });
 
   if (activeSection !== "home") {
     const ActiveComponent = sectionComponents[activeSection];
