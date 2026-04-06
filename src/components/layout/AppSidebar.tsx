@@ -47,10 +47,11 @@ export function AppSidebar() {
   const { profile, role, signOut } = useAuth();
 
   const showStrategic = role === "gestor" || role === "diretor";
+  const showSettings = role === "gestor" || role === "diretor";
   const navItems: NavItem[] = [
     ...baseNavItems,
     ...(showStrategic ? [strategicNav] : []),
-    settingsNav,
+    ...(showSettings ? [settingsNav] : []),
   ];
 
   const isStrategicActive = ["/goals", "/reports"].includes(location.pathname);

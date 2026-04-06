@@ -261,12 +261,20 @@ export function DirectorDashboard({ filters }: DirectorDashboardProps) {
           <CardContent>
             <ResponsiveContainer width="100%" height={240}>
               <BarChart data={monthlyRevenue}>
-                <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
-                <XAxis dataKey="month" tick={{ fontSize: 12 }} className="fill-muted-foreground" />
-                <YAxis tick={{ fontSize: 12 }} className="fill-muted-foreground" tickFormatter={(v) => `${(v / 1000).toFixed(0)}k`} />
-                <Tooltip formatter={(v: number) => formatCurrency(v)} />
+                <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                <XAxis dataKey="month" tick={{ fontSize: 12, fill: "hsl(var(--muted-foreground))" }} />
+                <YAxis tick={{ fontSize: 12, fill: "hsl(var(--muted-foreground))" }} tickFormatter={(v) => `${(v / 1000).toFixed(0)}k`} />
+                <Tooltip
+                  formatter={(v: number) => formatCurrency(v)}
+                  contentStyle={{
+                    backgroundColor: "hsl(var(--card))",
+                    border: "1px solid hsl(var(--border))",
+                    borderRadius: "8px",
+                    color: "hsl(var(--foreground))",
+                  }}
+                />
                 <Bar dataKey="saas" name="SaaS" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} />
-                <Bar dataKey="setup" name="Setup" fill="hsl(var(--muted-foreground))" radius={[4, 4, 0, 0]} />
+                <Bar dataKey="setup" name="Setup" fill="hsl(var(--muted))" radius={[4, 4, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
           </CardContent>
