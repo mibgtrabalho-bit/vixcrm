@@ -126,6 +126,8 @@ export function EditOpportunityDialog({ open, onOpenChange, opportunity, onUpdat
       company_id: companyId || null,
       expected_close_date: expectedCloseDate ? format(expectedCloseDate, "yyyy-MM-dd") : null,
       first_payment_date: firstPaymentDate ? format(firstPaymentDate, "yyyy-MM-dd") : null,
+      proxima_acao_tipo: proximaAcaoTipo || null,
+      proxima_acao_data: proximaAcaoData ? format(proximaAcaoData, "yyyy-MM-dd") : null,
     };
 
     if (canChangeOwner && assignedTo) {
