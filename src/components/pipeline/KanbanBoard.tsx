@@ -153,6 +153,8 @@ export function KanbanBoard({ teamFilter = "all" }: KanbanBoardProps) {
       first_payment_date: o.first_payment_date,
       created_at: o.created_at,
       last_activity_at: o.last_activity_at,
+      proxima_acao_tipo: o.proxima_acao_tipo,
+      proxima_acao_data: o.proxima_acao_data,
     }));
 
     setOpportunities(mapped);

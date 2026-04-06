@@ -162,6 +162,21 @@ export function OpportunityCard({ opportunity, index, onClick }: Props) {
               </span>
             </div>
           )}
+
+          {opportunity.proxima_acao_data && (
+            (() => {
+              const overdue = isNextActionOverdue(opportunity.proxima_acao_data);
+              const ActionIcon = (opportunity.proxima_acao_tipo && NEXT_ACTION_ICONS[opportunity.proxima_acao_tipo]) || CalendarCheck;
+              const dateFormatted = new Date(opportunity.proxima_acao_data + "T00:00:00").toLocaleDateString("pt-BR");
+              return (
+                <div className={`mt-1.5 flex items-center gap-1 text-[11px] ${overdue ? "text-destructive font-medium" : "text-muted-foreground"}`}>
+                  {overdue && <AlertTriangle className="h-3 w-3" />}
+                  <ActionIcon className="h-3 w-3" />
+                  <span>{opportunity.proxima_acao_tipo || "Ação"}: {dateFormatted}</span>
+                </div>
+              );
+            })()
+          )}
         </div>
       )}
     </Draggable>

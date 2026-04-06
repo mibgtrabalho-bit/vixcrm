@@ -274,6 +274,34 @@ export function EditOpportunityDialog({ open, onOpenChange, opportunity, onUpdat
             <Textarea id="edit-notes" value={notes} onChange={(e) => setNotes(e.target.value)} rows={2} />
           </div>
 
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <Label>Tipo da Próxima Ação</Label>
+              <Select value={proximaAcaoTipo} onValueChange={setProximaAcaoTipo}>
+                <SelectTrigger><SelectValue placeholder="Nenhuma" /></SelectTrigger>
+                <SelectContent>
+                  {["Ligação", "E-mail", "Reunião", "Proposta", "Outro"].map((t) => (
+                    <SelectItem key={t} value={t}>{t}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label>Data da Próxima Ação</Label>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button variant="outline" className={cn("w-full justify-start text-left font-normal", !proximaAcaoData && "text-muted-foreground")}>
+                    <CalendarIcon className="mr-2 h-4 w-4" />
+                    {proximaAcaoData ? format(proximaAcaoData, "dd/MM/yyyy") : "Selecione..."}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <Calendar mode="single" selected={proximaAcaoData} onSelect={setProximaAcaoData} locale={ptBR} className="p-3 pointer-events-auto" />
+                </PopoverContent>
+              </Popover>
+            </div>
+          </div>
+
           <div className="flex justify-between gap-2 pt-2">
             <AlertDialog>
               <AlertDialogTrigger asChild>
