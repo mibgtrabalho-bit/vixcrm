@@ -20,6 +20,8 @@ export interface Opportunity {
   first_payment_date?: string;
   created_at?: string;
   last_activity_at?: string;
+  proxima_acao_tipo?: string | null;
+  proxima_acao_data?: string | null;
 }
 
 interface Props {
