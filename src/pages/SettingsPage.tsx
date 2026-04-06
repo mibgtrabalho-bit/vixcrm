@@ -4,6 +4,7 @@ import { PageHeader } from "@/components/layout/PageHeader";
 import { AccessManagement } from "@/components/settings/AccessManagement";
 import { TeamManagement } from "@/components/settings/TeamManagement";
 import { FunnelManagement } from "@/components/settings/FunnelManagement";
+import { useAuth } from "@/contexts/AuthContext";
 import { Users, GitBranch, ShieldCheck, ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
