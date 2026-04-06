@@ -448,10 +448,16 @@ export function FunnelManagement() {
           <h3 className="text-lg font-semibold">Funis de Vendas</h3>
           <p className="text-sm text-muted-foreground">Gerencie seus funis e etapas de vendas.</p>
         </div>
-        <Button onClick={openCreateFunnel} size="sm">
-          <Plus className="h-4 w-4 mr-1" />
-          Novo Funil
-        </Button>
+        {canCreateFunnel ? (
+          <Button onClick={openCreateFunnel} size="sm">
+            <Plus className="h-4 w-4 mr-1" />
+            Novo Funil
+          </Button>
+        ) : (
+          <p className="text-xs text-muted-foreground max-w-[260px] text-right">
+            Limite de {MAX_FUNNELS} funis atingido. Desative um funil para criar outro.
+          </p>
+        )}
       </div>
 
       {funnels.length === 0 ? (
