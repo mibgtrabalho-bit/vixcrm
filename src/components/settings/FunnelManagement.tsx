@@ -8,6 +8,13 @@ import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
   Dialog,
   DialogContent,
   DialogHeader,
@@ -67,6 +74,9 @@ function slugify(name: string): string {
     .replace(/[^a-z0-9]+/g, "_")
     .replace(/^_|_$/g, "");
 }
+
+const ALLOWED_FUNNEL_NAMES = ["Prospecção", "Vendas", "Farming"];
+const MAX_FUNNELS = 3;
 
 /* ────── Component ────── */
 export function FunnelManagement() {
@@ -161,6 +171,10 @@ export function FunnelManagement() {
     setFunnelDialogOpen(true);
   };
 
+  const usedFunnelNames = funnels.map((f) => f.name);
+  const availableFunnelNames = ALLOWED_FUNNEL_NAMES.filter((n) => !usedFunnelNames.includes(n));
+  const canCreateFunnel = funnels.length < MAX_FUNNELS && availableFunnelNames.length > 0;
+
   const openEditFunnel = (funnel: Funnel) => {
     setEditingFunnel(funnel);
     setFunnelName(funnel.name);
@@ -169,7 +183,13 @@ export function FunnelManagement() {
 
   const handleSaveFunnel = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!profile?.tenant_id || !funnelName.trim()) return;
+    if (!profile?.tenant_id || (!editingFunnel && !funnelName.trim())) return;
+    if (!editingFunnel && !ALLOWED_FUNNEL_NAMES.includes(funnelName)) return;
+    if (!editingFunnel && usedFunnelNames.includes(funnelName)) {
+      toast({ title: "Já existe um funil com este nome", variant: "destructive" });
+      setSaving(false);
+      return;
+    }
     setSaving(true);
 
     if (editingFunnel) {
@@ -233,6 +253,17 @@ export function FunnelManagement() {
     if (funnel.is_default && funnel.is_active) {
       toast({ title: "O funil padrão não pode ser desativado", variant: "destructive" });
       return;
+    }
+    // Check if funnel has active opportunities before deactivating
+    if (funnel.is_active) {
+      const totalOpps = funnel.stages.reduce((sum, s) => sum + (s.opportunity_count || 0), 0);
+      if (totalOpps > 0) {
+        toast({
+          title: "Este funil possui oportunidades ativas e não pode ser desativado.",
+          variant: "destructive",
+        });
+        return;
+      }
     }
     setSaving(true);
     const { error } = await supabase
@@ -417,10 +448,16 @@ export function FunnelManagement() {
           <h3 className="text-lg font-semibold">Funis de Vendas</h3>
           <p className="text-sm text-muted-foreground">Gerencie seus funis e etapas de vendas.</p>
         </div>
-        <Button onClick={openCreateFunnel} size="sm">
-          <Plus className="h-4 w-4 mr-1" />
-          Novo Funil
-        </Button>
+        {canCreateFunnel ? (
+          <Button onClick={openCreateFunnel} size="sm">
+            <Plus className="h-4 w-4 mr-1" />
+            Novo Funil
+          </Button>
+        ) : (
+          <p className="text-xs text-muted-foreground max-w-[260px] text-right">
+            Limite de {MAX_FUNNELS} funis atingido. Desative um funil para criar outro.
+          </p>
+        )}
       </div>
 
       {funnels.length === 0 ? (
@@ -617,12 +654,25 @@ export function FunnelManagement() {
             <DialogTitle>{editingFunnel ? "Renomear Funil" : "Novo Funil"}</DialogTitle>
           </DialogHeader>
           <form onSubmit={handleSaveFunnel} className="space-y-4">
-            <Input
-              placeholder="Nome do funil"
-              value={funnelName}
-              onChange={(e) => setFunnelName(e.target.value)}
-              autoFocus
-            />
+            {editingFunnel ? (
+              <Input
+                placeholder="Nome do funil"
+                value={funnelName}
+                onChange={(e) => setFunnelName(e.target.value)}
+                autoFocus
+              />
+            ) : (
+              <Select value={funnelName} onValueChange={setFunnelName}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecione o tipo de funil" />
+                </SelectTrigger>
+                <SelectContent>
+                  {availableFunnelNames.map((name) => (
+                    <SelectItem key={name} value={name}>{name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
             <div className="flex justify-end gap-2">
               <Button type="button" variant="outline" onClick={() => setFunnelDialogOpen(false)}>
                 Cancelar
