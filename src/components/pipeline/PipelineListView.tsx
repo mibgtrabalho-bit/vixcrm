@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { Opportunity } from "./OpportunityCard";
-import { EditOpportunityDialog } from "./EditOpportunityDialog";
+import { OpportunityDetailDrawer } from "./OpportunityDetailDrawer";
 import { PIPELINE_STAGES } from "@/lib/constants";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useQueryClient } from "@tanstack/react-query";
@@ -32,8 +32,8 @@ interface PipelineListViewProps {
 export function PipelineListView({ teamFilter = "all" }: PipelineListViewProps) {
   const [opportunities, setOpportunities] = useState<Opportunity[]>([]);
   const [loading, setLoading] = useState(true);
-  const [editingOpp, setEditingOpp] = useState<Opportunity | null>(null);
-  const [editOpen, setEditOpen] = useState(false);
+  const [selectedOpp, setSelectedOpp] = useState<Opportunity | null>(null);
+  const [detailOpen, setDetailOpen] = useState(false);
   const [teamMemberIds, setTeamMemberIds] = useState<string[] | null>(null);
   const { profile } = useAuth();
   const queryClient = useQueryClient();
@@ -98,17 +98,20 @@ export function PipelineListView({ teamFilter = "all" }: PipelineListViewProps) 
   };
 
   const handleRowClick = (opp: Opportunity) => {
-    setEditingOpp(opp);
-    setEditOpen(true);
+    setSelectedOpp(opp);
+    setDetailOpen(true);
   };
 
   const handleUpdated = (updated: Opportunity) => {
     setOpportunities((prev) => prev.map((o) => (o.id === updated.id ? updated : o)));
+    setSelectedOpp((prev) => (prev?.id === updated.id ? { ...prev, ...updated } : prev));
     queryClient.invalidateQueries({ queryKey: ["dashboard-stats"] });
   };
 
   const handleDeleted = (id: string) => {
     setOpportunities((prev) => prev.filter((o) => o.id !== id));
+    setSelectedOpp((prev) => (prev?.id === id ? null : prev));
+    setDetailOpen(false);
     queryClient.invalidateQueries({ queryKey: ["dashboard-stats"] });
   };
 
@@ -178,10 +181,10 @@ export function PipelineListView({ teamFilter = "all" }: PipelineListViewProps) 
         </Table>
       </div>
 
-      <EditOpportunityDialog
-        open={editOpen}
-        onOpenChange={setEditOpen}
-        opportunity={editingOpp}
+      <OpportunityDetailDrawer
+        open={detailOpen}
+        onOpenChange={setDetailOpen}
+        opportunity={selectedOpp}
         onUpdated={handleUpdated}
         onDeleted={handleDeleted}
       />
