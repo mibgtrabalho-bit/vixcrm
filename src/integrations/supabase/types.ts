@@ -326,6 +326,38 @@ export type Database = {
           },
         ]
       }
+      oportunidade_notas: {
+        Row: {
+          autor_id: string
+          conteudo: string
+          criado_em: string
+          id: string
+          oportunidade_id: string
+        }
+        Insert: {
+          autor_id: string
+          conteudo: string
+          criado_em?: string
+          id?: string
+          oportunidade_id: string
+        }
+        Update: {
+          autor_id?: string
+          conteudo?: string
+          criado_em?: string
+          id?: string
+          oportunidade_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "oportunidade_notas_oportunidade_id_fkey"
+            columns: ["oportunidade_id"]
+            isOneToOne: false
+            referencedRelation: "opportunities"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       opportunities: {
         Row: {
           assigned_to: string
