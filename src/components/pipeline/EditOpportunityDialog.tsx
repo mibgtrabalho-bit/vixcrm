@@ -141,7 +141,19 @@ export function EditOpportunityDialog({ open, onOpenChange, opportunity, onUpdat
       stage,
       value_implantacao: numImpl,
       value_saas: numSaas,
+      notes: notes || undefined,
+      contact_id: contactId || undefined,
+      company_id: companyId || undefined,
+      contact_name: contacts.find((contact) => contact.id === contactId)?.name || undefined,
+      company_name: companies.find((company) => company.id === companyId)?.name || undefined,
+      assigned_to: (canChangeOwner ? assignedTo : opportunity.assigned_to) || undefined,
+      assigned_to_name: canChangeOwner
+        ? teamMembers.find((member) => member.user_id === assignedTo)?.full_name || opportunity.assigned_to_name
+        : opportunity.assigned_to_name,
       expected_close_date: expectedCloseDate ? format(expectedCloseDate, "yyyy-MM-dd") : undefined,
+      first_payment_date: firstPaymentDate ? format(firstPaymentDate, "yyyy-MM-dd") : undefined,
+      proxima_acao_tipo: proximaAcaoTipo || null,
+      proxima_acao_data: proximaAcaoData ? format(proximaAcaoData, "yyyy-MM-dd") : null,
     };
     onUpdated(optimistic);
     onOpenChange(false);

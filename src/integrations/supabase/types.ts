@@ -326,6 +326,38 @@ export type Database = {
           },
         ]
       }
+      oportunidade_notas: {
+        Row: {
+          autor_id: string
+          conteudo: string
+          criado_em: string
+          id: string
+          oportunidade_id: string
+        }
+        Insert: {
+          autor_id: string
+          conteudo: string
+          criado_em?: string
+          id?: string
+          oportunidade_id: string
+        }
+        Update: {
+          autor_id?: string
+          conteudo?: string
+          criado_em?: string
+          id?: string
+          oportunidade_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "oportunidade_notas_oportunidade_id_fkey"
+            columns: ["oportunidade_id"]
+            isOneToOne: false
+            referencedRelation: "opportunities"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       opportunities: {
         Row: {
           assigned_to: string
@@ -439,6 +471,41 @@ export type Database = {
             columns: ["tenant_id"]
             isOneToOne: false
             referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      opportunity_activity_log: {
+        Row: {
+          actor_id: string | null
+          created_at: string
+          event_type: string
+          id: string
+          metadata: Json
+          opportunity_id: string
+        }
+        Insert: {
+          actor_id?: string | null
+          created_at?: string
+          event_type: string
+          id?: string
+          metadata?: Json
+          opportunity_id: string
+        }
+        Update: {
+          actor_id?: string | null
+          created_at?: string
+          event_type?: string
+          id?: string
+          metadata?: Json
+          opportunity_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "opportunity_activity_log_opportunity_id_fkey"
+            columns: ["opportunity_id"]
+            isOneToOne: false
+            referencedRelation: "opportunities"
             referencedColumns: ["id"]
           },
         ]

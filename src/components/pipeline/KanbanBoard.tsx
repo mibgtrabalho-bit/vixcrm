@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { DragDropContext, DropResult } from "@hello-pangea/dnd";
 import { KanbanColumn } from "./KanbanColumn";
 import { Opportunity } from "./OpportunityCard";
-import { EditOpportunityDialog } from "./EditOpportunityDialog";
+import { OpportunityDetailDrawer } from "./OpportunityDetailDrawer";
 import { PIPELINE_STAGES } from "@/lib/constants";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -43,8 +43,8 @@ interface KanbanBoardProps {
 export function KanbanBoard({ teamFilter = "all" }: KanbanBoardProps) {
   const [opportunities, setOpportunities] = useState<Opportunity[]>([]);
   const [loading, setLoading] = useState(true);
-  const [editingOpp, setEditingOpp] = useState<Opportunity | null>(null);
-  const [editOpen, setEditOpen] = useState(false);
+  const [selectedOpp, setSelectedOpp] = useState<Opportunity | null>(null);
+  const [detailOpen, setDetailOpen] = useState(false);
   const [valueDialog, setValueDialog] = useState<{
     open: boolean;
     opportunityId: string;
@@ -223,19 +223,22 @@ export function KanbanBoard({ teamFilter = "all" }: KanbanBoardProps) {
   };
 
   const handleCardClick = (opp: Opportunity) => {
-    setEditingOpp(opp);
-    setEditOpen(true);
+    setSelectedOpp(opp);
+    setDetailOpen(true);
   };
 
   const handleOpportunityUpdated = (updated: Opportunity) => {
     setOpportunities((prev) =>
       prev.map((o) => (o.id === updated.id ? updated : o))
     );
+    setSelectedOpp((prev) => (prev?.id === updated.id ? { ...prev, ...updated } : prev));
     queryClient.invalidateQueries({ queryKey: ["dashboard-stats"] });
   };
 
   const handleOpportunityDeleted = (id: string) => {
     setOpportunities((prev) => prev.filter((o) => o.id !== id));
+    setSelectedOpp((prev) => (prev?.id === id ? null : prev));
+    setDetailOpen(false);
     queryClient.invalidateQueries({ queryKey: ["dashboard-stats"] });
   };
 
@@ -304,10 +307,10 @@ export function KanbanBoard({ teamFilter = "all" }: KanbanBoardProps) {
         </DialogContent>
       </Dialog>
 
-      <EditOpportunityDialog
-        open={editOpen}
-        onOpenChange={setEditOpen}
-        opportunity={editingOpp}
+      <OpportunityDetailDrawer
+        open={detailOpen}
+        onOpenChange={setDetailOpen}
+        opportunity={selectedOpp}
         onUpdated={handleOpportunityUpdated}
         onDeleted={handleOpportunityDeleted}
       />
